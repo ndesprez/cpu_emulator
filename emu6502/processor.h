@@ -418,12 +418,14 @@ protected:
 
 	void Call()
 	{
-		// TODO : implement Call
+		Memory[S--] = PC >> 8;
+		Memory[S--] = PC & 0xFF;
+		Jump();
 	}
 
 	void Return()
 	{
-		// TODO : implement Return
+		PC = Memory[++S] | (Memory[++S] << 8);
 	}
 
 	void Break()
@@ -445,20 +447,53 @@ protected:
 #pragma endregion
 
 #pragma region complex instructions
+	void BranchIfMinus()
+	{
+		if (ReadFlag(Negative))
+			Branch();
+	}
+
 	void BranchIfPositive()
 	{
 		if (!ReadFlag(Negative))
-		{
 			Branch();
-		}
 	}
-	void BranchIfMinus() {}
-	void BranchIfEqual() {}
-	void BranchIfNotEqual() {}
-	void BranchIfCarryClear() {}
-	void BranchIfCarrySet() {}
-	void BranchIfOverflowClear() {}
-	void BranchIfOverflowSet() {}
+
+	void BranchIfEqual() 
+	{
+		if (ReadFlag(Zero))
+			Branch();
+	}
+
+	void BranchIfNotEqual() 
+	{
+		if (!ReadFlag(Zero))
+			Branch();
+	}
+
+	void BranchIfCarrySet() 
+	{
+		if (ReadFlag(Carry))
+			Branch();
+	}
+
+	void BranchIfCarryClear()
+	{
+		if (!ReadFlag(Carry))
+			Branch();
+	}
+
+	void BranchIfOverflowSet() 
+	{
+		if (ReadFlag(Overflow))
+			Branch();
+	}
+
+	void BranchIfOverflowClear()
+	{
+		if (!ReadFlag(Overflow))
+			Branch();
+	}
 
 	void ClearCarryFlag()
 	{
@@ -474,24 +509,32 @@ protected:
 	{
 		WriteFlag(Interrupt, false);
 	}
+
 	void ClearOverflowFlag()
 	{
 		WriteFlag(Overflow, false);
 	}
 
-	void BitTest() {}
-
 	void SetCarryFlag()
 	{
 		WriteFlag(Carry, true);
 	}
+
 	void SetDecimalFlag()
 	{
 		WriteFlag(Decimal, true);
 	}
+
 	void SetInterruptFlag()
 	{
 		WriteFlag(Interrupt, true);
+	}
+
+	void BitTest()
+	{
+		WriteFlag(Zero, (A & *Target) == 0);
+		WriteFlag(Overflow, *Target & 0x40);
+		WriteFlag(Negative, *Target & 0x80);
 	}
 
 #pragma endregion
@@ -607,6 +650,8 @@ public:
 	Processor(byte *Array)
 	{
 		Memory = Array;
+		
+		// leaves room for undocumented/illegal instructions
 		for (int i = 0; i < 151; i++)
 		{
 			InstructionSet[LegalInstructionSet[i].OpCode] = LegalInstructionSet[i];
@@ -620,7 +665,7 @@ public:
 		PC = ReadAddress(0xFFFC);
 	}
 
-	void Step()
+	void Cycle()
 	{
 		ExecuteInstruction();
 	}

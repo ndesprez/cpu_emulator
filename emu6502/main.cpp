@@ -14,15 +14,23 @@ int main(void)
 	Memory[0x1000] = 0xA9; // LDA #
 	Memory[0x1001] = 69;
 
-	Memory[0x1002] = 0xAA; // TAX
+	Memory[0x1002] = 0x20; // JSR
+	Memory[0x1003] = 0x00;
+	Memory[0x1004] = 0x20;
 
-	Memory[0x1003] = 0xCA; // DEX
+	Memory[0x1005] = 0x6A; // ROR A
+
+	Memory[0x2000] = 0x69; // ADC #
+	Memory[0x2001] = 1;
+	Memory[0x2002] = 0x60; // RTS
 
 	MOS6502 = new Processor(Memory);
 	MOS6502->Reset();
-	MOS6502->Step();
-	MOS6502->Step();
-	MOS6502->Step();
+	MOS6502->Cycle();
+	MOS6502->Cycle();
+	MOS6502->Cycle();
+	MOS6502->Cycle();
+	MOS6502->Cycle();
 
 	delete MOS6502;
 	delete Memory;
