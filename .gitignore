@@ -30,4 +30,7 @@
 *.exe
 *.out
 *.app
-*/Debug/*.*
+**/Debug/*.*
+**/x64/Debug
+/.vs/**/*.*
+
