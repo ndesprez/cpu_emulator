@@ -54,7 +54,7 @@ protected:
 		void			(Processor::*Function)();
 	} Instruction;
 
-	Instruction ValidInstructionSet[151] = {
+	Instruction LegalInstructionSet[151] = {
 		{0x61, "ADC", SourceType::XIndirect, TargetType::Accumulator, &Processor::AddWithCarry},
 		{0x65, "ADC", SourceType::ZeroPage, TargetType::Accumulator, &Processor::AddWithCarry},
 		{0x69, "ADC", SourceType::Immediate, TargetType::Accumulator, &Processor::AddWithCarry},
@@ -210,11 +210,12 @@ protected:
 
 	Instruction	InstructionSet[256];
 
-	byte	*Memory;	// 64kb of RAM (hopefully)
-	byte	*Source;	// instruction source data
-	byte	*Target;	// instruction target
-	byte	Data;		// last read byte
-	word	Address;	// last read address
+	byte	*Memory;		// 64kb of RAM (hopefully)
+	byte	*Source;		// instruction source data
+	byte	*Target;		// instruction target
+	byte	Data;			// data register
+	byte	OpCode;			// instruction register
+	word	Address;		// address register
 	
 #pragma region low level code
 	bool SignBit(byte Value)
@@ -242,6 +243,13 @@ protected:
 	void WriteData(word Address) 
 	{
 		Memory[Address] = Data;
+	}
+
+	byte ReadOpCode()
+	{
+		OpCode = Memory[PC++];
+
+		return OpCode;
 	}
 
 	void ReadDataAtPC()
@@ -273,7 +281,7 @@ protected:
 		return P & Flag;
 	}
 
-	void UpdateFlag(Flags Flag, bool Value)
+	void WriteFlag(Flags Flag, bool Value)
 	{
 		if(Value)
 			P |= Flag;
@@ -281,10 +289,10 @@ protected:
 			P &= ~Flag;
 	}
 
-	void UpdateTargetFlags()
+	void WriteTargetFlags()
 	{
-		UpdateFlag(Zero, (*Target == 0));
-		UpdateFlag(Negative, SignBit(*Target));
+		WriteFlag(Zero, (*Target == 0));
+		WriteFlag(Negative, SignBit(*Target));
 	}
 
 #pragma endregion
@@ -293,7 +301,7 @@ protected:
 	void Load()
 	{
 		*Target = *Source;		
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void Store()
@@ -303,69 +311,69 @@ protected:
 
 	void Compare()
 	{
-		UpdateFlag(Carry, (*Target >= *Source));
-		UpdateFlag(Zero, (*Target == *Source));
-		UpdateFlag(Negative, SignBit(*Target));
+		WriteFlag(Carry, (*Target >= *Source));
+		WriteFlag(Zero, (*Target == *Source));
+		WriteFlag(Negative, SignBit(*Target));
 	}
 
 	void And()
 	{
 		*Target &= *Source;
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void Xor()
 	{
 		*Target ^= *Source;
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void Or()
 	{
 		*Target |= *Source;
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void RotateLeft()
 	{
 		byte c = ReadFlag(Carry);
-		UpdateFlag(Carry, SignBit(*Target));
+		WriteFlag(Carry, SignBit(*Target));
 		*Target = ((*Target) << 1) | c;
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void RotateRight()
 	{
 		byte c = ReadFlag(Carry);
-		UpdateFlag(Carry, (*Target) & 1);
+		WriteFlag(Carry, (*Target) & 1);
 		*Target = ((*Target) >> 1) | (c << 7);
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void ShiftLeft()
 	{
-		UpdateFlag(Carry, SignBit(*Target));
+		WriteFlag(Carry, SignBit(*Target));
 		*Target <<= 1;
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void ShiftRight()
 	{
-		UpdateFlag(Carry, (*Target) & 1);
+		WriteFlag(Carry, (*Target) & 1);
 		*Target >>= 1;
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void Increment()
 	{
 		(*Target)++;
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void Decrement()
 	{
 		(*Target)--;
-		UpdateTargetFlags();
+		WriteTargetFlags();
 	}
 
 	void AddWithCarry()
@@ -374,10 +382,10 @@ protected:
 		word result = *Target + *Source + ReadFlag(Carry);
 
 		// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
-		UpdateFlag(Overflow, ~(SignBit(*Target) ^ SignBit(*Source)) && (SignBit(*Target) ^ SignBit((byte)result)));
+		WriteFlag(Overflow, ~(SignBit(*Target) ^ SignBit(*Source)) && (SignBit(*Target) ^ SignBit((byte)result)));
 		*Target = result & 0xFF;
-		UpdateFlag(Carry, result & 0x100);
-		UpdateTargetFlags();
+		WriteFlag(Carry, result & 0x100);
+		WriteTargetFlags();
 	}
 
 	void SubtractWithCarry()
@@ -387,13 +395,13 @@ protected:
 
 	void Push()
 	{
-		Memory[S] = *Target;
+		Memory[AddWordByte(0x100, S)] = *Target;
 		S--;
 	}
 
 	void Pull()
 	{
-		*Target = Memory[S];
+		*Target = Memory[AddWordByte(0x100, S)];
 		S++;
 	}
 
@@ -437,7 +445,13 @@ protected:
 #pragma endregion
 
 #pragma region complex instructions
-	void BranchIfPositive() {}
+	void BranchIfPositive()
+	{
+		if (!ReadFlag(Negative))
+		{
+			Branch();
+		}
+	}
 	void BranchIfMinus() {}
 	void BranchIfEqual() {}
 	void BranchIfNotEqual() {}
@@ -446,23 +460,46 @@ protected:
 	void BranchIfOverflowClear() {}
 	void BranchIfOverflowSet() {}
 
-	void ClearCarryFlag() {}
-	void ClearDecimalFlag() {}
-	void ClearInterruptFlag() {}
-	void ClearOverflowFlag() {}
+	void ClearCarryFlag()
+	{
+		WriteFlag(Carry, false);
+	}
+	
+	void ClearDecimalFlag()
+	{
+		WriteFlag(Decimal, false);
+	}
+
+	void ClearInterruptFlag() 
+	{
+		WriteFlag(Interrupt, false);
+	}
+	void ClearOverflowFlag()
+	{
+		WriteFlag(Overflow, false);
+	}
 
 	void BitTest() {}
 
-	void SetCarryFlag() {}
-	void SetDecimalFlag() {}
-	void SetInterruptFlag() {}
+	void SetCarryFlag()
+	{
+		WriteFlag(Carry, true);
+	}
+	void SetDecimalFlag()
+	{
+		WriteFlag(Decimal, true);
+	}
+	void SetInterruptFlag()
+	{
+		WriteFlag(Interrupt, true);
+	}
 
 #pragma endregion
 
 	void ExecuteInstruction()
 	{
-		ReadDataAtPC();
-		Instruction in = InstructionSet[Data];
+		ReadOpCode();
+		Instruction in = InstructionSet[OpCode];
 
 		switch (in.Source)
 		{
@@ -572,7 +609,7 @@ public:
 		Memory = Array;
 		for (int i = 0; i < 151; i++)
 		{
-			InstructionSet[ValidInstructionSet[i].OpCode] = ValidInstructionSet[i];
+			InstructionSet[LegalInstructionSet[i].OpCode] = LegalInstructionSet[i];
 		}
 	}
 
