@@ -33,7 +33,7 @@ int main(void)
 	MOS6502->Cycle();
 
 	delete MOS6502;
-	delete Memory;
+	delete[] Memory;
 
 	return 0;
 }

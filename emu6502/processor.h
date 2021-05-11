@@ -6,15 +6,19 @@ using word = unsigned short;
 class Processor
 {
 protected:
+	const word NonMaskableInterruptHandler	= 0xFFFA;
+	const word ResetHandler					= 0xFFFC;
+	const word InterruptHandler				= 0xFFFE;
+
 	enum Flags : byte {
-		fCarry = 1,
-		fZero = 2,
-		fInterrupt = 4,
-		fDecimal = 8,
-		fBreak = 16,	// always set to 1
+		fCarry		=   1,
+		fZero		=   2,
+		fInterrupt	=   4,
+		fDecimal	=   8,
+		fBreak		=  16,	// always set to 1
 		// status bit 5 is always set to 1
-		fOverflow = 64,
-		fNegative = 128
+		fOverflow	=  64,
+		fNegative	= 128
 	};
 
 	// equivalent to addressing modes plus extra for transfer instructions
@@ -208,7 +212,7 @@ protected:
 		{0x98, "TYA", sIndexY, tAccumulator, &Processor::Load}
 	};
 
-	const Instruction*	InstructionSet[256];
+	const Instruction*	InstructionSet[256] = {};
 
 	byte	*Memory;		// 64kb of RAM (hopefully)
 	byte	*Source;		// instruction source
@@ -378,6 +382,7 @@ protected:
 
 	void AddWithCarry()
 	{
+		// TODO : implement BCD addition
 		word result = *Target + *Source + ReadFlag(fCarry);
 
 		// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
@@ -389,6 +394,7 @@ protected:
 
 	void SubtractWithCarry()
 	{
+		// TODO : implement BCD subtraction
 		word result = *Target + ~*Source + ReadFlag(fCarry);
 
 		WriteFlag(fOverflow, (~*Source ^ result) & (*Target ^ result) & 0x80);
@@ -435,7 +441,7 @@ protected:
 		Memory[S--] = PC >> 8;
 		Memory[S--] = PC & 0xFF;
 		Memory[S--] = P | fBreak;
-		PC = ReadAddress(0xFFFE);
+		PC = ReadAddress(InterruptHandler);
 	}
 
 	void ReturnFromInterrupt()
@@ -657,6 +663,18 @@ public:
 	Processor(byte *Array)
 	{
 		Memory = Array;
+		Source = nullptr;
+		Target = nullptr;
+		Data = 0;
+		Address = 0;
+		OpCode = 0;
+
+		A = 0;
+		X = 0;
+		Y = 0;
+		S = 0;
+		P = 0;
+		PC = 0;
 		
 		// leaves room for undocumented/illegal instructions
 		for (int i = 0; i < 151; i++)
@@ -669,7 +687,17 @@ public:
 	{
 		S = 0xFD;
 		P = 0b00110000;
-		PC = ReadAddress(0xFFFC);
+		PC = ReadAddress(ResetHandler);
+	}
+
+	void Interrupt()
+	{
+		// TODO : implement Interrupt
+	}
+
+	void NonMaskableInterrupt()
+	{
+		// TODO : implement NonMaskableInterrupt
 	}
 
 	void Cycle()
