@@ -54,7 +54,7 @@ protected:
 		void			(Processor::*Function)();
 	};
 
-	const Instruction LegalInstructionSet[151] = {
+	const Instruction	LegalInstructionSet[151] = {
 		{0x61, "ADC", sXIndirect, tAccumulator, &Processor::AddWithCarry},
 		{0x65, "ADC", sZeroPage, tAccumulator, &Processor::AddWithCarry},
 		{0x69, "ADC", sImmediate, tAccumulator, &Processor::AddWithCarry},
@@ -208,10 +208,10 @@ protected:
 		{0x98, "TYA", sIndexY, tAccumulator, &Processor::Load}
 	};
 
-	Instruction	InstructionSet[256];
+	const Instruction*	InstructionSet[256];
 
 	byte	*Memory;		// 64kb of RAM (hopefully)
-	byte	*Source;		// instruction source data
+	byte	*Source;		// instruction source
 	byte	*Target;		// instruction target
 	byte	Data;			// data register
 	byte	OpCode;			// instruction register
@@ -223,12 +223,12 @@ protected:
 		return Value & 0x80;
 	}
 
-	word AddWordByte(word A, byte B)
+	word Add(word A, byte B)
 	{
 		return ((int)A + B) & 0xFFFF;
 	}
 
-	byte AddBytes(byte A, byte B)
+	byte Add(byte A, byte B)
 	{
 		return ((word)A + B) & 0xFF;
 	}
@@ -259,7 +259,7 @@ protected:
 
 	word ReadAddress(word Address)
 	{
-		this->Address = Memory[Address] | (Memory[AddWordByte(Address, 1)] << 8);
+		this->Address = Memory[Address] | (Memory[Add(Address, 1)] << 8);
 
 		return this->Address;
 	}
@@ -267,7 +267,7 @@ protected:
 	void WriteAddress(word Address)
 	{
 		Memory[Address] = this->Address & 0xFF;
-		Memory[AddWordByte(Address, 1)] = this->Address >> 8;
+		Memory[Add(Address, 1)] = this->Address >> 8;
 	}
 
 	void ReadAddressAtPC()
@@ -378,11 +378,10 @@ protected:
 
 	void AddWithCarry()
 	{
-		// TODO : check how the added carry affect the overflow logic
 		word result = *Target + *Source + ReadFlag(fCarry);
 
 		// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
-		WriteFlag(fOverflow, ~(SignBit(*Target) ^ SignBit(*Source)) && (SignBit(*Target) ^ SignBit((byte)result)));
+		WriteFlag(fOverflow, (*Source ^ result) & (*Target ^ result) & 0x80);
 		*Target = result & 0xFF;
 		WriteFlag(fCarry, result & 0x100);
 		WriteTargetFlags();
@@ -390,19 +389,22 @@ protected:
 
 	void SubtractWithCarry()
 	{
-		// TODO : implement SubtractWithCarry
+		word result = *Target + ~*Source + ReadFlag(fCarry);
+
+		WriteFlag(fOverflow, (~*Source ^ result) & (*Target ^ result) & 0x80);
+		*Target = result & 0xFF;
+		WriteFlag(fCarry, result & 0x100);
+		WriteTargetFlags();
 	}
 
 	void Push()
 	{
-		Memory[AddWordByte(0x100, S)] = *Target;
-		S--;
+		Memory[Add((word)0x100, S--)] = *Target;
 	}
 
 	void Pull()
 	{
-		*Target = Memory[AddWordByte(0x100, S)];
-		S++;
+		*Target = Memory[Add((word)0x100, ++S)];
 	}
 
 	void Branch()
@@ -542,21 +544,22 @@ protected:
 	void ExecuteInstruction()
 	{
 		ReadOpCode();
-		Instruction in = InstructionSet[OpCode];
+		// TODO : handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
+		const Instruction* in = InstructionSet[OpCode];
 
-		switch (in.Source)
+		switch (in->Source)
 		{
 		case sAccumulator:
-			Source = (byte *)&A;
+			Source = &A;
 			break;
 		case sIndexX:
-			Source = (byte *)&X;
+			Source = &X;
 			break;
 		case sIndexY:
-			Source = (byte *)&Y;
+			Source = &Y;
 			break;
 		case sStackPointer:
-			Source = (byte *)&S;
+			Source = &S;
 			break;
 		case sAbsolute:
 			ReadAddressAtPC();
@@ -564,11 +567,11 @@ protected:
 			break;
 		case sAbsoluteX:
 			ReadAddressAtPC();
-			Source = &Memory[AddWordByte(Address, X)];
+			Source = &Memory[Add(Address, X)];
 			break;
 		case sAbsoluteY:
 			ReadAddressAtPC();
-			Source = &Memory[AddWordByte(Address, Y)];
+			Source = &Memory[Add(Address, Y)];
 			break;
 		case sImmediate:
 			ReadDataAtPC();
@@ -584,13 +587,13 @@ protected:
 			break;
 		case sXIndirect:
 			ReadDataAtPC();
-			ReadAddress(Memory[AddBytes(Data, X)]);
+			ReadAddress(Memory[Add(Address, X)]);
 			Source = &Memory[Address];
 			break;
 		case sIndirectY:
 			ReadDataAtPC();
 			ReadAddress(Data);
-			Source = &Memory[AddBytes(Data, Y)];
+			Source = &Memory[Add(Address, Y)];
 			break;
 		case sZeroPage:
 			ReadDataAtPC();
@@ -598,18 +601,18 @@ protected:
 			break;
 		case sZeroPageX:
 			ReadDataAtPC();
-			Source = &Memory[AddBytes(Data, X)];
+			Source = &Memory[Add(Data, X)];
 			break;
 		case sZeroPageY:
 			ReadDataAtPC();
-			Source = &Memory[AddBytes(Data, Y)];
+			Source = &Memory[Add(Data, Y)];
 			break;
 		default:
 			// unknown addressing mode ?
 			break;
 		}
 
-		switch (in.Target)
+		switch (in->Target)
 		{
 		case tNone:
 			Target = nullptr;
@@ -637,7 +640,7 @@ protected:
 			break;
 		}
 
-		(this->*in.Function)();
+		(this->*in->Function)();
 	}
 			
 public:
@@ -654,7 +657,7 @@ public:
 		// leaves room for undocumented/illegal instructions
 		for (int i = 0; i < 151; i++)
 		{
-			InstructionSet[LegalInstructionSet[i].OpCode] = LegalInstructionSet[i];
+			InstructionSet[LegalInstructionSet[i].OpCode] = &LegalInstructionSet[i];
 		}
 	}
 
