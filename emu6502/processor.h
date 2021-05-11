@@ -11,7 +11,7 @@ protected:
 		fZero = 2,
 		fInterrupt = 4,
 		fDecimal = 8,
-		fBreak = 16,
+		fBreak = 16,	// always set to 1
 		// status bit 5 is always set to 1
 		fOverflow = 64,
 		fNegative = 128
@@ -432,12 +432,16 @@ protected:
 
 	void Break()
 	{
-		// TODO : implement Break
+		Memory[S--] = PC >> 8;
+		Memory[S--] = PC & 0xFF;
+		Memory[S--] = P | fBreak;
+		PC = ReadAddress(0xFFFE);
 	}
 
 	void ReturnFromInterrupt()
 	{
-		// TODO : implement ReturnFromInterrupt
+		P = Memory[++S];
+		Return();
 	}
 
 	void Nop()
@@ -618,7 +622,7 @@ protected:
 			Target = nullptr;
 			break;
 		case tAccumulator:
-			Target = (byte *)&A;
+			Target = &A;
 			break;
 		case tIndexX:
 			Target = &X;
@@ -664,7 +668,7 @@ public:
 	void Reset()
 	{
 		S = 0xFD;
-		P = 0b00100000;
+		P = 0b00110000;
 		PC = ReadAddress(0xFFFC);
 	}
 
