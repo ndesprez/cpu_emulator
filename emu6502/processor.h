@@ -421,7 +421,6 @@ protected:
 	void PullAddress(word &Address)
 	{
 		Address = Memory[++S] | (Memory[++S] << 8);
-
 	}
 
 	void Pull()
@@ -456,16 +455,6 @@ protected:
 		PushAddress(PC);
 		Memory[S--] = P | fBreak;
 		PC = ReadAddress(InterruptVector);
-	}
-
-	void ReturnFromInterrupt()
-	{
-		P = Memory[++S];
-		Return();
-		if (NonMaskableInterruptState)
-			NonMaskableInterruptState = false;
-		else if(InterruptState)
-			InterruptState = false;
 	}
 
 	void Nop()
@@ -575,19 +564,27 @@ protected:
 
 	void Interrupt()
 	{
+		InterruptState = false;
 		PushAddress(PC);
 		Memory[S--] = P & ~fBreak;
-		WriteFlag(fInterrupt, false);
+		WriteFlag(fInterrupt, true);
 		PC = ReadAddress(InterruptVector);
 	}
 
 	void NonMaskableInterrupt()
 	{
+		NonMaskableInterruptState = false;
 		PushAddress(PC);
 		Memory[S--] = P;
+		WriteFlag(fInterrupt, true);
 		PC = ReadAddress(NonMaskableInterruptVector);
 	}
 
+	void ReturnFromInterrupt()
+	{
+		P = Memory[++S];
+		Return();
+	}
 
 #pragma endregion
 

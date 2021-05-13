@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28307.1500
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "emu6502", "emu6502\emu6502.vcxproj", "{040DE831-5376-4BBF-A0DB-025240A0F57C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "emu6502test", "emu6502test\emu6502test.vcxproj", "{A47399E9-700E-4488-86B4-3B05737F2E74}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{040DE831-5376-4BBF-A0DB-025240A0F57C}.Release|x64.Build.0 = Release|x64
 		{040DE831-5376-4BBF-A0DB-025240A0F57C}.Release|x86.ActiveCfg = Release|Win32
 		{040DE831-5376-4BBF-A0DB-025240A0F57C}.Release|x86.Build.0 = Release|Win32
+		{A47399E9-700E-4488-86B4-3B05737F2E74}.Debug|x64.ActiveCfg = Debug|x64
+		{A47399E9-700E-4488-86B4-3B05737F2E74}.Debug|x64.Build.0 = Debug|x64
+		{A47399E9-700E-4488-86B4-3B05737F2E74}.Debug|x86.ActiveCfg = Debug|Win32
+		{A47399E9-700E-4488-86B4-3B05737F2E74}.Debug|x86.Build.0 = Debug|Win32
+		{A47399E9-700E-4488-86B4-3B05737F2E74}.Release|x64.ActiveCfg = Release|x64
+		{A47399E9-700E-4488-86B4-3B05737F2E74}.Release|x64.Build.0 = Release|x64
+		{A47399E9-700E-4488-86B4-3B05737F2E74}.Release|x86.ActiveCfg = Release|Win32
+		{A47399E9-700E-4488-86B4-3B05737F2E74}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
