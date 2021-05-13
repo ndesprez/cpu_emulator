@@ -25,12 +25,12 @@ int main(void)
 	Memory[0x2002] = 0x60; // RTS
 
 	MOS6502 = new Processor(Memory);
-	MOS6502->Reset();
-	MOS6502->Cycle();
-	MOS6502->Cycle();
-	MOS6502->Cycle();
-	MOS6502->Cycle();
-	MOS6502->Cycle();
+	MOS6502->SendRST();
+	MOS6502->Step();
+	MOS6502->Step();
+	MOS6502->Step();
+	MOS6502->Step();
+	MOS6502->Step();
 
 	delete MOS6502;
 	delete[] Memory;

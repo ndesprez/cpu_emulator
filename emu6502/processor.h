@@ -6,9 +6,9 @@ using word = unsigned short;
 class Processor
 {
 protected:
-	const word NonMaskableInterruptHandler	= 0xFFFA;
-	const word ResetHandler					= 0xFFFC;
-	const word InterruptHandler				= 0xFFFE;
+	const word NonMaskableInterruptVector	= 0xFFFA;
+	const word ResetVector					= 0xFFFC;
+	const word InterruptVector				= 0xFFFE;
 
 	enum Flags : byte {
 		fCarry		=   1,
@@ -220,8 +220,12 @@ protected:
 	byte	Data;			// data register
 	byte	OpCode;			// instruction register
 	word	Address;		// address register
+
+	bool ResetState;
+	bool InterruptState;
+	bool NonMaskableInterruptState;
 	
-#pragma region low level code
+#pragma region internal functions
 	bool SignBit(byte Value)
 	{
 		return Value & 0x80;
@@ -301,7 +305,7 @@ protected:
 
 #pragma endregion
 
-#pragma region simple instructions
+#pragma region instructions
 	void Load()
 	{
 		*Target = *Source;		
@@ -408,6 +412,18 @@ protected:
 		Memory[Add((word)0x100, S--)] = *Target;
 	}
 
+	void PushAddress(word Address)
+	{
+		Memory[S--] = Address >> 8;
+		Memory[S--] = Address & 0xFF;
+	}
+
+	void PullAddress(word &Address)
+	{
+		Address = Memory[++S] | (Memory[++S] << 8);
+
+	}
+
 	void Pull()
 	{
 		*Target = Memory[Add((word)0x100, ++S)];
@@ -426,28 +442,30 @@ protected:
 
 	void Call()
 	{
-		Memory[S--] = PC >> 8;
-		Memory[S--] = PC & 0xFF;
+		PushAddress(PC);
 		Jump();
 	}
 
 	void Return()
 	{
-		PC = Memory[++S] | (Memory[++S] << 8);
+		PullAddress(PC);
 	}
 
 	void Break()
 	{
-		Memory[S--] = PC >> 8;
-		Memory[S--] = PC & 0xFF;
+		PushAddress(PC);
 		Memory[S--] = P | fBreak;
-		PC = ReadAddress(InterruptHandler);
+		PC = ReadAddress(InterruptVector);
 	}
 
 	void ReturnFromInterrupt()
 	{
 		P = Memory[++S];
 		Return();
+		if (NonMaskableInterruptState)
+			NonMaskableInterruptState = false;
+		else if(InterruptState)
+			InterruptState = false;
 	}
 
 	void Nop()
@@ -455,10 +473,6 @@ protected:
 		// nope nope nope nope...
 	}
 
-
-#pragma endregion
-
-#pragma region complex instructions
 	void BranchIfMinus()
 	{
 		if (ReadFlag(fNegative))
@@ -548,6 +562,32 @@ protected:
 		WriteFlag(fOverflow, *Target & 0x40);
 		WriteFlag(fNegative, *Target & 0x80);
 	}
+
+	void Reset()
+	{
+		S = 0xFD;
+		P = 0b00110000;
+		PC = ReadAddress(ResetVector);
+		ResetState = false;
+		InterruptState = false;
+		NonMaskableInterruptState = false;
+	}
+
+	void Interrupt()
+	{
+		PushAddress(PC);
+		Memory[S--] = P & ~fBreak;
+		WriteFlag(fInterrupt, false);
+		PC = ReadAddress(InterruptVector);
+	}
+
+	void NonMaskableInterrupt()
+	{
+		PushAddress(PC);
+		Memory[S--] = P;
+		PC = ReadAddress(NonMaskableInterruptVector);
+	}
+
 
 #pragma endregion
 
@@ -675,6 +715,10 @@ public:
 		S = 0;
 		P = 0;
 		PC = 0;
+
+		ResetState = false;
+		InterruptState = false;
+		NonMaskableInterruptState = false;
 		
 		// leaves room for undocumented/illegal instructions
 		for (int i = 0; i < 151; i++)
@@ -683,25 +727,35 @@ public:
 		}
 	}
 
-	void Reset()
+	void SendRST()
 	{
-		S = 0xFD;
-		P = 0b00110000;
-		PC = ReadAddress(ResetHandler);
+		ResetState = true;
 	}
 
-	void Interrupt()
+	void SendIRQ()
 	{
-		// TODO : implement Interrupt
+		if(!ReadFlag(fInterrupt))
+			InterruptState = true;
 	}
 
-	void NonMaskableInterrupt()
+	void SendNMI()
 	{
-		// TODO : implement NonMaskableInterrupt
+		NonMaskableInterruptState = true;
 	}
 
-	void Cycle()
+	void Step()
 	{
+		if (ResetState)
+		{
+			Reset();
+			return;
+		}
+
 		ExecuteInstruction();
+
+		if (NonMaskableInterruptState)
+			NonMaskableInterrupt();
+		else if (InterruptState)
+			Interrupt();
 	}
 };
