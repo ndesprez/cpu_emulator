@@ -634,7 +634,7 @@ protected:
 			break;
 		case sXIndirect:
 			ReadDataAtPC();
-			ReadAddress(Memory[Add(Address, X)]);
+			ReadAddress(Add(Data, X));
 			Source = &Memory[Address];
 			break;
 		case sIndirectY:

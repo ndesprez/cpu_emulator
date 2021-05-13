@@ -49,6 +49,67 @@ namespace emu6502test
 			Assert::AreEqual((int)MOS6502->A, 0xDA);
 		}
 
+		TEST_METHOD(LDA_ABSX)
+		{
+			Memory[0x1000] = 0xA2;
+			Memory[0x1001] = 0x20;
+			Memory[0x1002] = 0xBD;
+			Memory[0x1003] = 0x00;
+			Memory[0x1004] = 0x20;
+			Memory[0x2020] = 0xDB;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->A, 0xDB);
+		}
+
+		TEST_METHOD(LDA_ABSY)
+		{
+			Memory[0x1000] = 0xA0;
+			Memory[0x1001] = 0x30;
+			Memory[0x1002] = 0xB9;
+			Memory[0x1003] = 0x00;
+			Memory[0x1004] = 0x20;
+			Memory[0x2030] = 0xDC;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->A, 0xDC);
+		}
+
+		TEST_METHOD(LDA_ZPG)
+		{
+			Memory[0x1000] = 0xA5;
+			Memory[0x1001] = 0x40;
+			Memory[0x0040] = 0xDD;
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->A, 0xDD);
+		}
+
+		TEST_METHOD(LDA_ZPGX)
+		{
+			Memory[0x1000] = 0xA2;
+			Memory[0x1001] = 0x10;
+			Memory[0x1002] = 0xB5;
+			Memory[0x1003] = 0x40;
+			Memory[0x0050] = 0xDE;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->A, 0xDE);
+		}
+
+		TEST_METHOD(LDA_XIND)
+		{
+			Memory[0x1000] = 0xA2;
+			Memory[0x1001] = 0x20;
+			Memory[0x1002] = 0xA1;
+			Memory[0x1003] = 0x20;
+			Memory[0x0040] = 0x00;
+			Memory[0x0041] = 0x30;
+			Memory[0x3000] = 0xDF;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->A, 0xDF);
+		}
+
 		TEST_METHOD(LDX_IMM)
 		{
 			Memory[0x1000] = 0xA2;

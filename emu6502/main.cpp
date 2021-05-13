@@ -11,23 +11,16 @@ int main(void)
 	Memory[0xFFFC] = 0x00;
 	Memory[0xFFFD] = 0x10;
 
-	Memory[0x1000] = 0xA9; // LDA #
-	Memory[0x1001] = 69;
-
-	Memory[0x1002] = 0x20; // JSR
-	Memory[0x1003] = 0x00;
-	Memory[0x1004] = 0x20;
-
-	Memory[0x1005] = 0x6A; // ROR A
-
-	Memory[0x2000] = 0x69; // ADC #
-	Memory[0x2001] = 1;
-	Memory[0x2002] = 0x60; // RTS
+	Memory[0x1000] = 0xA2;
+	Memory[0x1001] = 0x20;
+	Memory[0x1002] = 0xA1;
+	Memory[0x1003] = 0x20;
+	Memory[0x0040] = 0x00;
+	Memory[0x0041] = 0x30;
+	Memory[0x3000] = 0xDF;
 
 	MOS6502 = new Processor(Memory);
 	MOS6502->SendRST();
-	MOS6502->Step();
-	MOS6502->Step();
 	MOS6502->Step();
 	MOS6502->Step();
 	MOS6502->Step();
