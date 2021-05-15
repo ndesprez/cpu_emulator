@@ -422,4 +422,89 @@ namespace emu6502test
 			Assert::AreEqual((int)Memory[0x0080], 0x13);
 		}
 	};
+
+	TEST_CLASS(TransferInstructions)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(TAX)
+		{
+			Memory[0x1000] = 0xA9;
+			Memory[0x1001] = 0x3A;
+			Memory[0x1002] = 0xA2;
+			Memory[0x1003] = 0xFF;
+			Memory[0x1004] = 0xAA;
+			MOS6502->Step();
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->X, 0x3A);
+		}
+
+		TEST_METHOD(TAY)
+		{
+			Memory[0x1000] = 0xA9;
+			Memory[0x1001] = 0x3B;
+			Memory[0x1002] = 0xA0;
+			Memory[0x1003] = 0xFF;
+			Memory[0x1004] = 0xA8;
+			MOS6502->Step();
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->Y, 0x3B);
+		}
+
+		TEST_METHOD(TSX)
+		{
+			Memory[0x1000] = 0xA2;
+			Memory[0x1001] = 0xFF;
+			Memory[0x1002] = 0xBA;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->X, (int)MOS6502->S);
+		}
+
+		TEST_METHOD(TXA)
+		{
+			Memory[0x1000] = 0xA9;
+			Memory[0x1001] = 0xFF;
+			Memory[0x1002] = 0xA2;
+			Memory[0x1003] = 0xD1;
+			Memory[0x1004] = 0x8A;
+			MOS6502->Step();
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->A, 0xD1);
+		}
+
+		TEST_METHOD(TXS)
+		{
+			Memory[0x1000] = 0xA2;
+			Memory[0x1001] = 0xD3;
+			Memory[0x1002] = 0x9A;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->S, 0xD3);
+		}
+
+		TEST_METHOD(TYA)
+		{
+			Memory[0x1000] = 0xA9;
+			Memory[0x1001] = 0xFF;
+			Memory[0x1002] = 0xA0;
+			Memory[0x1003] = 0xD2;
+			Memory[0x1004] = 0x98;
+			MOS6502->Step();
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)MOS6502->A, 0xD2);
+		}
+	};
 }
