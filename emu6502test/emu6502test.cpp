@@ -331,5 +331,95 @@ namespace emu6502test
 			MOS6502->Step();
 			Assert::AreEqual((int)Memory[0x2016], 0xDA);
 		}
+
+		TEST_METHOD(STA_INDY)
+		{
+			Memory[0x1000] = 0xA9;
+			Memory[0x1001] = 0xDB;
+			Memory[0x1002] = 0xA0;
+			Memory[0x1003] = 0x20;
+			Memory[0x1004] = 0x91;
+			Memory[0x1005] = 0x60;
+			Memory[0x0060] = 0x11;
+			Memory[0x0061] = 0x30;
+			MOS6502->Step();
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)Memory[0x3031], 0xDB);
+		}
+
+		TEST_METHOD(STX_ABS)
+		{
+			Memory[0x1000] = 0xA2;
+			Memory[0x1001] = 0x75;
+			Memory[0x1002] = 0x8E;
+			Memory[0x1003] = 0x00;
+			Memory[0x1004] = 0x21;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)Memory[0x2100], 0x75);
+		}
+
+		TEST_METHOD(STX_ZPG)
+		{
+			Memory[0x1000] = 0xA2;
+			Memory[0x1001] = 0x77;
+			Memory[0x1002] = 0x86;
+			Memory[0x1003] = 0x38;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)Memory[0x0038], 0x77);
+		}
+
+		TEST_METHOD(STX_ZPGY)
+		{
+			Memory[0x1000] = 0xA2;
+			Memory[0x1001] = 0x76;
+			Memory[0x1002] = 0xA0;
+			Memory[0x1003] = 0x10;
+			Memory[0x1004] = 0x96;
+			Memory[0x1005] = 0x40;
+			MOS6502->Step();
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)Memory[0x0050], 0x76);
+		}
+
+		TEST_METHOD(STY_ABS)
+		{
+			Memory[0x1000] = 0xA0;
+			Memory[0x1001] = 0x11;
+			Memory[0x1002] = 0x8C;
+			Memory[0x1003] = 0x10;
+			Memory[0x1004] = 0x40;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)Memory[0x4010], 0x11);
+		}
+
+		TEST_METHOD(STY_ZPG)
+		{
+			Memory[0x1000] = 0xA0;
+			Memory[0x1001] = 0x12;
+			Memory[0x1002] = 0x84;
+			Memory[0x1003] = 0x45;
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)Memory[0x0045], 0x12);
+		}
+
+		TEST_METHOD(STY_ZPGX)
+		{
+			Memory[0x1000] = 0xA0;
+			Memory[0x1001] = 0x13;
+			Memory[0x1002] = 0xA2;
+			Memory[0x1003] = 0x20;
+			Memory[0x1004] = 0x94;
+			Memory[0x1005] = 0x60;
+			MOS6502->Step();
+			MOS6502->Step();
+			MOS6502->Step();
+			Assert::AreEqual((int)Memory[0x0080], 0x13);
+		}
 	};
 }
