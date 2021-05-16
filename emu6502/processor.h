@@ -724,6 +724,36 @@ public:
 		}
 	}
 
+	bool FlagCarry()
+	{
+		return ReadFlag(fCarry);
+	}
+
+	bool FlagZero()
+	{
+		return ReadFlag(fZero);
+	}
+
+	bool FlagInterrupt()
+	{
+		return ReadFlag(fInterrupt);
+	}
+
+	bool FlagDecimal()
+	{
+		return ReadFlag(fDecimal);
+	}
+
+	bool FlagOverflow()
+	{
+		return ReadFlag(fOverflow);
+	}
+
+	bool FlagNegative()
+	{
+		return ReadFlag(fNegative);
+	}
+
 	void SendRST()
 	{
 		ResetState = true;

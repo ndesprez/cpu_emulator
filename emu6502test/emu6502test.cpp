@@ -6,11 +6,13 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace emu6502test
 {
+	const wchar_t MessageNegativeFalse[] = L"Flag Negative is false.";
+	const wchar_t MessageNegativeTrue[] = L"Flag Negative is true.";
+	const wchar_t MessageZeroTrue[] = L"Flag Zero is true.";
+
 	Processor	*MOS6502;
 	byte		*Memory;
 	word		WriteCounter;
-
-	// TODO : add status flags asserts in relevant tests
 
 	void _method_initialize()
 	{
@@ -86,8 +88,8 @@ namespace emu6502test
 			_write("A9 D5");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->A, 0xD5);
-			Assert::IsTrue(MOS6502->P & 0x80, L"Flag Negative is false.");
-			Assert::IsFalse(MOS6502->P & 0x02, L"Flag Zero is true.");
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDA_ABS)
@@ -96,8 +98,8 @@ namespace emu6502test
 			_write(0x2000, "7A");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->A, 0x7A);
-			Assert::IsFalse(MOS6502->P & 0x80, L"Flag Negative is true.");
-			Assert::IsFalse(MOS6502->P & 0x02, L"Flag Zero is true.");
+			Assert::IsFalse(MOS6502->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDA_ABSX)
@@ -106,6 +108,8 @@ namespace emu6502test
 			_write(0x2020, "DB");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xDB);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDA_ABSY)
@@ -114,6 +118,8 @@ namespace emu6502test
 			_write(0x2030, "DC");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xDC);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDA_ZPG)
@@ -122,6 +128,8 @@ namespace emu6502test
 			_write(0x0040, "DD");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->A, 0xDD);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDA_ZPGX)
@@ -130,6 +138,8 @@ namespace emu6502test
 			_write(0x0050, "DE");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xDE);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDA_XIND)
@@ -139,6 +149,8 @@ namespace emu6502test
 			_write(0x3000, "DF");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xDF);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDA_INDY)
@@ -148,6 +160,8 @@ namespace emu6502test
 			_write(0x4030, "E0");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xE0);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDX_IMM)
@@ -155,6 +169,8 @@ namespace emu6502test
 			_write("A2 C7");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->X, 0xC7);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDX_ABS)
@@ -163,6 +179,8 @@ namespace emu6502test
 			_write(0x2000, "C8");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->X, 0xC8);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDX_ABSY)
@@ -171,6 +189,8 @@ namespace emu6502test
 			_write(0x2030, "C9");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->X, 0xC9);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDX_ZPG)
@@ -179,6 +199,8 @@ namespace emu6502test
 			_write(0x0040, "DE");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->X, 0xDE);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDX_ZPGY)
@@ -187,6 +209,8 @@ namespace emu6502test
 			_write(0x0011, "DF");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->X, 0xDF);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDY_IMM)
@@ -194,6 +218,8 @@ namespace emu6502test
 			_write("A0 91");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->Y, 0x91);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDY_ABS)
@@ -202,6 +228,8 @@ namespace emu6502test
 			_write(0x2000, "92");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->Y, 0x92);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 		
 		TEST_METHOD(LDY_ABSX)
@@ -210,6 +238,8 @@ namespace emu6502test
 			_write(0x2030, "CA");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->Y, 0xCA);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDY_ZPG)
@@ -218,6 +248,8 @@ namespace emu6502test
 			_write(0x0050, "DF");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->Y, 0xDF);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(LDY_ZPGX)
@@ -226,7 +258,9 @@ namespace emu6502test
 			_write(0x00A0, "E0");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->Y, 0xE0);
-		}	
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
+		}
 	};
 
 	TEST_CLASS(StoreInstructions)
@@ -352,6 +386,8 @@ namespace emu6502test
 			_write("A9 3A A2 FF AA");
 			MOS6502->Step(3);
 			Assert::AreEqual((int)MOS6502->X, 0x3A);
+			Assert::IsFalse(MOS6502->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(TAY)
@@ -359,6 +395,8 @@ namespace emu6502test
 			_write("A9 3B A0 FF A8");
 			MOS6502->Step(3);
 			Assert::AreEqual((int)MOS6502->Y, 0x3B);
+			Assert::IsFalse(MOS6502->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(TSX)
@@ -366,6 +404,8 @@ namespace emu6502test
 			_write("A2 FF BA");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->X, (int)MOS6502->S);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(TXA)
@@ -373,6 +413,8 @@ namespace emu6502test
 			_write("A9 FF A2 D1 8A");
 			MOS6502->Step(3);
 			Assert::AreEqual((int)MOS6502->A, 0xD1);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(TXS)
@@ -380,6 +422,8 @@ namespace emu6502test
 			_write("A2 D3 9A");
 			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->S, 0xD3);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 
 		TEST_METHOD(TYA)
@@ -387,6 +431,8 @@ namespace emu6502test
 			_write("A9 FF A0 D2 98");
 			MOS6502->Step(3);
 			Assert::AreEqual((int)MOS6502->A, 0xD2);
+			Assert::IsTrue(MOS6502->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(MOS6502->FlagZero(), MessageZeroTrue);
 		}
 	};
 }
