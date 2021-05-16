@@ -1,30 +1,35 @@
 #include "processor.h"
 
-Processor *MOS6502;
-byte	  *Memory;
+Processor *CPU;
+byte	  *RAM;
 
 int main(void)
 {
-	Memory = new byte[0x10000];
+	RAM = new byte[0x10000];
 
 	// set PC vector to 0x1000
-	Memory[0xFFFC] = 0x00;
-	Memory[0xFFFD] = 0x10;
+	RAM[0xFFFC] = 0x00;
+	RAM[0xFFFD] = 0x10;
+/*
+	RAM[0x1000] = 0xA2;
+	RAM[0x1001] = 0x20;
+	RAM[0x1002] = 0xA1;
+	RAM[0x1003] = 0x20;
+	RAM[0x0040] = 0x00;
+	RAM[0x0041] = 0x30;
+	RAM[0x3000] = 0xDF;
+*/
 
-	Memory[0x1000] = 0xA2;
-	Memory[0x1001] = 0x20;
-	Memory[0x1002] = 0xA1;
-	Memory[0x1003] = 0x20;
-	Memory[0x0040] = 0x00;
-	Memory[0x0041] = 0x30;
-	Memory[0x3000] = 0xDF;
+	RAM[0x1000] = 0x38;
 
-	MOS6502 = new Processor(Memory);
-	MOS6502->SendRST();
-	MOS6502->Step(3);
+	CPU = new Processor(RAM);
+	CPU->SendRST();
+	CPU->Step(2);
 
-	delete MOS6502;
-	delete[] Memory;
+	bool f = CPU->FlagCarry();
+
+	delete CPU;
+	delete[] RAM;
 
 	return 0;
 }

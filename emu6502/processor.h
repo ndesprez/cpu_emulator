@@ -72,8 +72,8 @@ protected:
 		{0x29, "AND", sImmediate, tAccumulator, &Processor::And},
 		{0x2D, "AND", sAbsolute, tAccumulator, &Processor::And},
 		{0x31, "AND", sIndirectY, tAccumulator, &Processor::And},
-		{0x34, "AND", sZeroPageX, tAccumulator, &Processor::And},
-		{0x38, "AND", sAbsoluteY, tAccumulator, &Processor::And},
+		{0x35, "AND", sZeroPageX, tAccumulator, &Processor::And},
+		{0x39, "AND", sAbsoluteY, tAccumulator, &Processor::And},
 		{0x3D, "AND", sAbsoluteX, tAccumulator, &Processor::And},
 		{0x06, "ASL", sZeroPage, tAddress, &Processor::ShiftLeft},
 		{0x0A, "ASL A", sImplied, tAccumulator, &Processor::ShiftLeft},
@@ -171,7 +171,7 @@ protected:
 		{0x26, "ROL", sZeroPage, tAddress, &Processor::RotateLeft},
 		{0x2A, "ROL A", sImplied, tAccumulator, &Processor::RotateLeft},
 		{0x2E, "ROL", sAbsolute, tAddress, &Processor::RotateLeft},
-		{0x35, "ROL", sZeroPageX, tNone, &Processor::RotateLeft},
+		{0x36, "ROL", sZeroPageX, tNone, &Processor::RotateLeft},
 		{0x3E, "ROL", sAbsoluteX, tAddress, &Processor::RotateLeft},
 		{0x66, "ROR", sZeroPage, tAddress, &Processor::RotateRight},
 		{0x6A, "ROR A", sImplied, tAccumulator, &Processor::RotateRight},
@@ -188,7 +188,7 @@ protected:
 		{0xF5, "SBC", sZeroPageX, tAccumulator, &Processor::SubtractWithCarry},
 		{0xF9, "SBC", sAbsoluteY, tAccumulator, &Processor::SubtractWithCarry},
 		{0xFD, "SBC", sAbsoluteX, tAccumulator, &Processor::SubtractWithCarry},
-		{0x37, "SEC", sImplied, tNone, &Processor::SetCarryFlag},
+		{0x38, "SEC", sImplied, tNone, &Processor::SetCarryFlag},
 		{0xF8, "SED", sImplied, tNone, &Processor::SetDecimalFlag},
 		{0x78, "SEI", sImplied, tNone, &Processor::SetInterruptFlag},
 		{0x81, "STA", sXIndirect, tAccumulator, &Processor::Store},
@@ -452,9 +452,12 @@ protected:
 
 	void Break()
 	{
-		PushAddress(PC);
-		Memory[S--] = P | fBreak;
-		PC = ReadAddress(InterruptVector);
+		if (!EndOnBreak)
+		{
+			PushAddress(PC);
+			Memory[S--] = P | fBreak;
+			PC = ReadAddress(InterruptVector);
+		}
 	}
 
 	void Nop()
@@ -696,6 +699,7 @@ public:
 	word	PC;		// program counter
 	byte	S;		// stack pointer
 	byte	P;		// status flags
+	bool	EndOnBreak;
 
 	Processor(byte *Array)
 	{
@@ -712,6 +716,8 @@ public:
 		S = 0;
 		P = 0;
 		PC = 0;
+
+		EndOnBreak = false;
 
 		ResetState = false;
 		InterruptState = false;
@@ -790,5 +796,13 @@ public:
 	{
 		for (int i = 0; i < Count; i++)
 			Step();
+	}
+
+	void Run()
+	{
+		do
+		{
+			Step();
+		} while ((OpCode != 0x00) || !EndOnBreak);
 	}
 };
