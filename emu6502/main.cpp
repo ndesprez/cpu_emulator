@@ -21,9 +21,7 @@ int main(void)
 
 	MOS6502 = new Processor(Memory);
 	MOS6502->SendRST();
-	MOS6502->Step();
-	MOS6502->Step();
-	MOS6502->Step();
+	MOS6502->Step(3);
 
 	delete MOS6502;
 	delete[] Memory;

@@ -755,4 +755,10 @@ public:
 		else if (InterruptState)
 			Interrupt();
 	}
+
+	void Step(int Count)
+	{
+		for (int i = 0; i < Count; i++)
+			Step();
+	}
 };

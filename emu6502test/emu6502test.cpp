@@ -6,10 +6,13 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace emu6502test
 {
-	Processor *MOS6502;
-	byte	  *Memory;
+	Processor	*MOS6502;
+	byte		*Memory;
+	word		WriteCounter;
 
-	static void _method_initialize()
+	// TODO : add status flags asserts in relevant tests
+
+	void _method_initialize()
 	{
 		Memory = new byte[0x10000];
 		Memory[0xFFFC] = 0x00;
@@ -18,12 +21,51 @@ namespace emu6502test
 		MOS6502 = new Processor(Memory);
 		MOS6502->SendRST();
 		MOS6502->Step();
+		WriteCounter = MOS6502->PC;
 	}
 
-	static void _method_cleanup()
+	void _method_cleanup()
 	{
 		delete MOS6502;
 		delete[] Memory;
+	}
+
+	void _write(char const *Data)
+	{
+		byte value;
+		word i = 0;
+		bool high = true;
+
+		while (char c = Data[i])
+		{
+			if (c == ' ')
+			{
+				i++;
+				continue;
+			}
+
+			if (high)
+				value = 0;
+
+			if (c >= '0' && c <= '9')
+				value |= c - 0x30;
+			else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f')
+				value |= (c | 0x20) - 0x57;
+
+			if (high)
+				value <<= 4;
+			else
+				Memory[WriteCounter++] = value;
+
+			high = !high;
+			i++;
+		}
+	}
+
+	void _write(word Address, char const *Data)
+	{
+		WriteCounter = Address;
+		_write(Data);
 	}
 
 	TEST_CLASS(LoadInstructions)
@@ -41,198 +83,148 @@ namespace emu6502test
 
 		TEST_METHOD(LDA_IMM)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xD5;
+			_write("A9 D5");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->A, 0xD5);
+			Assert::IsTrue(MOS6502->P & 0x80, L"Flag Negative is false.");
+			Assert::IsFalse(MOS6502->P & 0x02, L"Flag Zero is true.");
 		}
 
 		TEST_METHOD(LDA_ABS)
 		{
-			Memory[0x1000] = 0xAD;
-			Memory[0x1001] = 0x00;
-			Memory[0x1002] = 0x20;
-			Memory[0x2000] = 0xDA;
+			_write("AD 00 20");
+			_write(0x2000, "7A");
 			MOS6502->Step();
-			Assert::AreEqual((int)MOS6502->A, 0xDA);
+			Assert::AreEqual((int)MOS6502->A, 0x7A);
+			Assert::IsFalse(MOS6502->P & 0x80, L"Flag Negative is true.");
+			Assert::IsFalse(MOS6502->P & 0x02, L"Flag Zero is true.");
 		}
 
 		TEST_METHOD(LDA_ABSX)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0x20;
-			Memory[0x1002] = 0xBD;
-			Memory[0x1003] = 0x00;
-			Memory[0x1004] = 0x20;
-			Memory[0x2020] = 0xDB;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 20 BD 00 20");
+			_write(0x2020, "DB");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xDB);
 		}
 
 		TEST_METHOD(LDA_ABSY)
 		{
-			Memory[0x1000] = 0xA0;
-			Memory[0x1001] = 0x30;
-			Memory[0x1002] = 0xB9;
-			Memory[0x1003] = 0x00;
-			Memory[0x1004] = 0x20;
-			Memory[0x2030] = 0xDC;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A0 30 B9 00 20");
+			_write(0x2030, "DC");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xDC);
 		}
 
 		TEST_METHOD(LDA_ZPG)
 		{
-			Memory[0x1000] = 0xA5;
-			Memory[0x1001] = 0x40;
-			Memory[0x0040] = 0xDD;
+			_write("A5 40");
+			_write(0x0040, "DD");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->A, 0xDD);
 		}
 
 		TEST_METHOD(LDA_ZPGX)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0x10;
-			Memory[0x1002] = 0xB5;
-			Memory[0x1003] = 0x40;
-			Memory[0x0050] = 0xDE;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 10 B5 40");
+			_write(0x0050, "DE");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xDE);
 		}
 
 		TEST_METHOD(LDA_XIND)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0x20;
-			Memory[0x1002] = 0xA1;
-			Memory[0x1003] = 0x20;
-			Memory[0x0040] = 0x00;
-			Memory[0x0041] = 0x30;
-			Memory[0x3000] = 0xDF;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 20 A1 20");
+			_write(0x0040, "00 30");
+			_write(0x3000, "DF");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xDF);
 		}
 
 		TEST_METHOD(LDA_INDY)
 		{
-			Memory[0x1000] = 0xA0;
-			Memory[0x1001] = 0x30;
-			Memory[0x1002] = 0xB1;
-			Memory[0x1003] = 0x20;
-			Memory[0x0020] = 0x00;
-			Memory[0x0021] = 0x40;
-			Memory[0x4030] = 0xE0;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A0 30 B1 20");
+			_write(0x0020, "00 40");
+			_write(0x4030, "E0");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->A, 0xE0);
 		}
 
 		TEST_METHOD(LDX_IMM)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0xC7;
+			_write("A2 C7");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->X, 0xC7);
 		}
 
 		TEST_METHOD(LDX_ABS)
 		{
-			Memory[0x1000] = 0xAE;
-			Memory[0x1001] = 0x00;
-			Memory[0x1002] = 0x20;
-			Memory[0x2000] = 0xC8;
+			_write("AE 00 20");
+			_write(0x2000, "C8");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->X, 0xC8);
 		}
 
 		TEST_METHOD(LDX_ABSY)
 		{
-			Memory[0x1000] = 0xA0;
-			Memory[0x1001] = 0x30;
-			Memory[0x1002] = 0xBE;
-			Memory[0x1003] = 0x00;
-			Memory[0x1004] = 0x20;
-			Memory[0x2030] = 0xC9;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A0 30 BE 00 20");
+			_write(0x2030, "C9");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->X, 0xC9);
 		}
 
 		TEST_METHOD(LDX_ZPG)
 		{
-			Memory[0x1000] = 0xA6;
-			Memory[0x1001] = 0x40;
-			Memory[0x0040] = 0xDE;
+			_write("A6 40");
+			_write(0x0040, "DE");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->X, 0xDE);
 		}
 
 		TEST_METHOD(LDX_ZPGY)
 		{
-			Memory[0x1000] = 0xA0;
-			Memory[0x1001] = 0x91;
-			Memory[0x1002] = 0xB6;
-			Memory[0x1003] = 0x80;
-			Memory[0x0011] = 0xDF;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A0 91 B6 80");
+			_write(0x0011, "DF");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->X, 0xDF);
 		}
 
 		TEST_METHOD(LDY_IMM)
 		{
-			Memory[0x1000] = 0xA0;
-			Memory[0x1001] = 0x91;
+			_write("A0 91");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->Y, 0x91);
 		}
 
 		TEST_METHOD(LDY_ABS)
 		{
-			Memory[0x1000] = 0xAC;
-			Memory[0x1001] = 0x00;
-			Memory[0x1002] = 0x20;
-			Memory[0x2000] = 0x92;
+			_write("AC 00 20");
+			_write(0x2000, "92");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->Y, 0x92);
 		}
 		
 		TEST_METHOD(LDY_ABSX)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0x30;
-			Memory[0x1002] = 0xBC;
-			Memory[0x1003] = 0x00;
-			Memory[0x1004] = 0x20;
-			Memory[0x2030] = 0xCA;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 30 BC 00 20");
+			_write(0x2030, "CA");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->Y, 0xCA);
 		}
 
 		TEST_METHOD(LDY_ZPG)
 		{
-			Memory[0x1000] = 0xA4;
-			Memory[0x1001] = 0x50;
-			Memory[0x0050] = 0xDF;
+			_write("A4 50");
+			_write(0x0050, "DF");
 			MOS6502->Step();
 			Assert::AreEqual((int)MOS6502->Y, 0xDF);
 		}
 
 		TEST_METHOD(LDY_ZPGX)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0x20;
-			Memory[0x1002] = 0xB4;
-			Memory[0x1003] = 0x80;
-			Memory[0x00A0] = 0xE0;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 20 B4 80");
+			_write(0x00A0, "E0");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->Y, 0xE0);
 		}	
 	};
@@ -251,174 +243,94 @@ namespace emu6502test
 
 		TEST_METHOD(STA_ABS)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xD5;
-			Memory[0x1002] = 0x8D;
-			Memory[0x1003] = 0x00;
-			Memory[0x1004] = 0x20;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 D5 8D 00 20");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)Memory[0x2000], 0xD5);
 		}
 
 		TEST_METHOD(STA_ABSX)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xD6;
-			Memory[0x1002] = 0xA2;
-			Memory[0x1003] = 0xC7;
-			Memory[0x1004] = 0x9D;
-			Memory[0x1005] = 0x00;
-			Memory[0x1006] = 0x20;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 D6 A2 C7 9D 00 20");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)Memory[0x20C7], 0xD6);
 		}
 
 		TEST_METHOD(STA_ABSY)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xD7;
-			Memory[0x1002] = 0xA0;
-			Memory[0x1003] = 0xB7;
-			Memory[0x1004] = 0x99;
-			Memory[0x1005] = 0x00;
-			Memory[0x1006] = 0x20;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 D7 A0 B7 99 00 20");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)Memory[0x20B7], 0xD7);
 		}
 
 		TEST_METHOD(STA_ZPG)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xD8;
-			Memory[0x1002] = 0x85;
-			Memory[0x1003] = 0x20;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 D8 85 20");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)Memory[0x0020], 0xD8);
 		}
 
 		TEST_METHOD(STA_ZPGX)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xD9;
-			Memory[0x1002] = 0xA2;
-			Memory[0x1003] = 0x10;
-			Memory[0x1004] = 0x95;
-			Memory[0x1005] = 0x20;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 D9 A2 10 95 20");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)Memory[0x0030], 0xD9);
 		}
 
 		TEST_METHOD(STA_XIND)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xDA;
-			Memory[0x1002] = 0xA2;
-			Memory[0x1003] = 0x10;
-			Memory[0x1004] = 0x81;
-			Memory[0x1005] = 0x20;
-			Memory[0x0030] = 0x16;
-			Memory[0x0031] = 0x20;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 DA A2 10 81 20");
+			_write(0x0030, "16 20");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)Memory[0x2016], 0xDA);
 		}
 
 		TEST_METHOD(STA_INDY)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xDB;
-			Memory[0x1002] = 0xA0;
-			Memory[0x1003] = 0x20;
-			Memory[0x1004] = 0x91;
-			Memory[0x1005] = 0x60;
-			Memory[0x0060] = 0x11;
-			Memory[0x0061] = 0x30;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 DB A0 20 91 60");
+			_write(0x0060, "11 30");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)Memory[0x3031], 0xDB);
 		}
 
 		TEST_METHOD(STX_ABS)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0x75;
-			Memory[0x1002] = 0x8E;
-			Memory[0x1003] = 0x00;
-			Memory[0x1004] = 0x21;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 75 8E 00 21");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)Memory[0x2100], 0x75);
 		}
 
 		TEST_METHOD(STX_ZPG)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0x77;
-			Memory[0x1002] = 0x86;
-			Memory[0x1003] = 0x38;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 77 86 38");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)Memory[0x0038], 0x77);
 		}
 
 		TEST_METHOD(STX_ZPGY)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0x76;
-			Memory[0x1002] = 0xA0;
-			Memory[0x1003] = 0x10;
-			Memory[0x1004] = 0x96;
-			Memory[0x1005] = 0x40;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 76 A0 10 96 40");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)Memory[0x0050], 0x76);
 		}
 
 		TEST_METHOD(STY_ABS)
 		{
-			Memory[0x1000] = 0xA0;
-			Memory[0x1001] = 0x11;
-			Memory[0x1002] = 0x8C;
-			Memory[0x1003] = 0x10;
-			Memory[0x1004] = 0x40;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A0 11 8C 10 40");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)Memory[0x4010], 0x11);
 		}
 
 		TEST_METHOD(STY_ZPG)
 		{
-			Memory[0x1000] = 0xA0;
-			Memory[0x1001] = 0x12;
-			Memory[0x1002] = 0x84;
-			Memory[0x1003] = 0x45;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A0 12 84 45");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)Memory[0x0045], 0x12);
 		}
 
 		TEST_METHOD(STY_ZPGX)
 		{
-			Memory[0x1000] = 0xA0;
-			Memory[0x1001] = 0x13;
-			Memory[0x1002] = 0xA2;
-			Memory[0x1003] = 0x20;
-			Memory[0x1004] = 0x94;
-			Memory[0x1005] = 0x60;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A0 13 A2 20 94 60");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)Memory[0x0080], 0x13);
 		}
 	};
@@ -437,73 +349,43 @@ namespace emu6502test
 
 		TEST_METHOD(TAX)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0x3A;
-			Memory[0x1002] = 0xA2;
-			Memory[0x1003] = 0xFF;
-			Memory[0x1004] = 0xAA;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 3A A2 FF AA");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)MOS6502->X, 0x3A);
 		}
 
 		TEST_METHOD(TAY)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0x3B;
-			Memory[0x1002] = 0xA0;
-			Memory[0x1003] = 0xFF;
-			Memory[0x1004] = 0xA8;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 3B A0 FF A8");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)MOS6502->Y, 0x3B);
 		}
 
 		TEST_METHOD(TSX)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0xFF;
-			Memory[0x1002] = 0xBA;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 FF BA");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->X, (int)MOS6502->S);
 		}
 
 		TEST_METHOD(TXA)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xFF;
-			Memory[0x1002] = 0xA2;
-			Memory[0x1003] = 0xD1;
-			Memory[0x1004] = 0x8A;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 FF A2 D1 8A");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)MOS6502->A, 0xD1);
 		}
 
 		TEST_METHOD(TXS)
 		{
-			Memory[0x1000] = 0xA2;
-			Memory[0x1001] = 0xD3;
-			Memory[0x1002] = 0x9A;
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A2 D3 9A");
+			MOS6502->Step(2);
 			Assert::AreEqual((int)MOS6502->S, 0xD3);
 		}
 
 		TEST_METHOD(TYA)
 		{
-			Memory[0x1000] = 0xA9;
-			Memory[0x1001] = 0xFF;
-			Memory[0x1002] = 0xA0;
-			Memory[0x1003] = 0xD2;
-			Memory[0x1004] = 0x98;
-			MOS6502->Step();
-			MOS6502->Step();
-			MOS6502->Step();
+			_write("A9 FF A0 D2 98");
+			MOS6502->Step(3);
 			Assert::AreEqual((int)MOS6502->A, 0xD2);
 		}
 	};
