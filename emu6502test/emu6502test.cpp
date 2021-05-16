@@ -647,4 +647,98 @@ namespace emu6502test
 			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
 		}
 	};
+
+	TEST_CLASS(OrInstructions)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(ORA_IMM)
+		{
+			_write("A9 05 09 A0");
+			CPU->Run();
+			Assert::AreEqual(0xA5, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ORA_ABS)
+		{
+			_write("A9 06 0D 00 20");
+			_write(0x2000, "B0");
+			CPU->Run();
+			Assert::AreEqual(0xB6, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ORA_ABSX)
+		{
+			_write("A9 07 A2 20 1D 00 30");
+			_write(0x3020, "C0");
+			CPU->Run();
+			Assert::AreEqual(0xC7, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ORA_ABSY)
+		{
+			_write("A9 08 A0 30 19 00 40");
+			_write(0x4030, "D0");
+			CPU->Run();
+			Assert::AreEqual(0xD8, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ORA_ZPG)
+		{
+			_write("A9 09 05 78");
+			_write(0x0078, "E0");
+			CPU->Run();
+			Assert::AreEqual(0xE9, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ORA_ZPGX)
+		{
+			_write("A9 0A A2 10 15 38");
+			_write(0x0048, "F0");
+			CPU->Run();
+			Assert::AreEqual(0xFA, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ORA_XIND)
+		{
+			_write("A9 0B A2 38 01 40");
+			_write(0x0078, "10 50");
+			_write(0x5010, "10");
+			CPU->Run();
+			Assert::AreEqual(0x1B, (int)CPU->A);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ORA_INDY)
+		{
+			_write("A9 0C A0 20 11 60");
+			_write(0x0060, "00 40");
+			_write(0x4020, "20");
+			CPU->Run();
+			Assert::AreEqual(0x2C, (int)CPU->A);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+	};
 }
