@@ -84,7 +84,7 @@ namespace emu6502test
 		_write(Data, AddBreak);
 	}
 
-	TEST_CLASS(LoadInstructions)
+	TEST_CLASS(Load)
 	{
 	public:
 		TEST_METHOD_INITIALIZE(createCPU)
@@ -277,7 +277,7 @@ namespace emu6502test
 		}
 	};
 
-	TEST_CLASS(StoreInstructions)
+	TEST_CLASS(Store)
 	{
 		TEST_METHOD_INITIALIZE(createCPU)
 		{
@@ -383,7 +383,7 @@ namespace emu6502test
 		}
 	};
 
-	TEST_CLASS(TransferInstructions)
+	TEST_CLASS(Transfer)
 	{
 		TEST_METHOD_INITIALIZE(createCPU)
 		{
@@ -450,7 +450,7 @@ namespace emu6502test
 		}
 	};
 
-	TEST_CLASS(StackInstructions)
+	TEST_CLASS(Stack)
 	{
 	public:
 		TEST_METHOD_INITIALIZE(createCPU)
@@ -492,7 +492,7 @@ namespace emu6502test
 		}
 	};
 
-	TEST_CLASS(FlagsInstructions)
+	TEST_CLASS(Flags)
 	{
 		TEST_METHOD_INITIALIZE(createCPU)
 		{
@@ -554,7 +554,7 @@ namespace emu6502test
 		}
 	};
 
-	TEST_CLASS(AndInstructions)
+	TEST_CLASS(And)
 	{
 		TEST_METHOD_INITIALIZE(createCPU)
 		{
@@ -648,7 +648,7 @@ namespace emu6502test
 		}
 	};
 
-	TEST_CLASS(OrInstructions)
+	TEST_CLASS(Or)
 	{
 		TEST_METHOD_INITIALIZE(createCPU)
 		{
@@ -738,6 +738,79 @@ namespace emu6502test
 			CPU->Run();
 			Assert::AreEqual(0x2C, (int)CPU->A);
 			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+	};
+
+	TEST_CLASS(Xor)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(EOR_IMM)
+		{
+			_write("A9 FF 49 AA");
+			CPU->Run();
+			Assert::AreEqual(0x55, (int)CPU->A);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(EOR_ABS)
+		{
+			_write("A9 F0 4D 00 20");
+			_write(0x2000, "38");
+			CPU->Run();
+			Assert::AreEqual(0xC8, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(EOR_ABSX)
+		{
+			_write("A9 09 A2 10 5D 00 30");
+			_write(0x3010, "C8");
+			CPU->Run();
+			Assert::AreEqual(0xC1, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(EOR_ZPG)
+		{
+			_write("A9 5A 45 88");
+			_write(0x0088, "FF");
+			CPU->Run();
+			Assert::AreEqual(0xA5, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(EOR_ZPGX)
+		{
+			_write("A9 A5 A2 10 55 98");
+			_write(0x00A8, "F0");
+			CPU->Run();
+			Assert::AreEqual(0x55, (int)CPU->A);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(EOR_XIND)
+		{
+			_write("A9 FF A2 50 41 10");
+			_write(0x0060, "00 71");
+			_write(0x7100, "55");
+			CPU->Run();
+			Assert::AreEqual(0xAA, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
 			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
 		}
 	};
