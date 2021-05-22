@@ -1312,5 +1312,69 @@ namespace emu6502test
 			AssertZero(false);
 			AssertNegative(false);
 		}
+
+		TEST_METHOD(CPX_IMM)
+		{
+			_write("A2 60 E0 61");
+			CPU->Run();
+			AssertLastInstruction("CPX", sImmediate);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(true);
+		}
+
+		TEST_METHOD(CPX_ABS)
+		{
+			_write("A2 10 EC 00 30");
+			_write(0x3000, "F0");
+			CPU->Run();
+			AssertLastInstruction("CPX", sAbsolute);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(CPX_ZPG)
+		{
+			_write("A2 10 E4 30");
+			_write(0x0030, "F0");
+			CPU->Run();
+			AssertLastInstruction("CPX", sZeroPage);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(CPY_IMM)
+		{
+			_write("A0 60 C0 61");
+			CPU->Run();
+			AssertLastInstruction("CPY", sImmediate);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(true);
+		}
+
+		TEST_METHOD(CPY_ABS)
+		{
+			_write("A2 10 CC 00 30");
+			_write(0x3000, "F0");
+			CPU->Run();
+			AssertLastInstruction("CPY", sAbsolute);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(CPY_ZPG)
+		{
+			_write("A2 10 C4 30");
+			_write(0x0030, "F0");
+			CPU->Run();
+			AssertLastInstruction("CPY", sZeroPage);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(false);
+		}
 	};
 }
