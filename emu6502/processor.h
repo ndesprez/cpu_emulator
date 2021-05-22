@@ -321,7 +321,8 @@ protected:
 	{
 		WriteFlag(fCarry, (*Target >= *Source));
 		WriteFlag(fZero, (*Target == *Source));
-		WriteFlag(fNegative, SignBit(*Target));
+		// TODO : code a better byte subtraction
+		WriteFlag(fNegative, SignBit(*Target - *Source));
 	}
 
 	void And()

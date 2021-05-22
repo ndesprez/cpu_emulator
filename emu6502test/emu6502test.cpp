@@ -16,6 +16,13 @@ namespace emu6502test
 	const wchar_t MessageCarryFalse[] = L"Carry flag is false.";
 	const wchar_t MessageCarryTrue[] = L"Carry flag is true.";
 
+#define ASSERT_NEGATIVE_TRUE	Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse)
+#define ASSERT_NEGATIVE_FALSE	Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue)
+#define ASSERT_ZERO_TRUE		Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse)
+#define ASSERT_ZERO_FALSE		Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue)
+#define ASSERT_CARRY_TRUE		Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse)
+#define ASSERT_CARRY_FALSE		Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue)
+
 	Processor	*CPU;
 	byte		*RAM;
 	word		WriteCounter;
@@ -104,8 +111,8 @@ namespace emu6502test
 			_write("A9 D5");
 			CPU->Run();
 			Assert::AreEqual(0xD5, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDA_ABS)
@@ -114,8 +121,8 @@ namespace emu6502test
 			_write(0x2000, "7A");
 			CPU->Run();
 			Assert::AreEqual(0x7A, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDA_ABSX)
@@ -124,8 +131,8 @@ namespace emu6502test
 			_write(0x2020, "DB");
 			CPU->Run();
 			Assert::AreEqual(0xDB, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDA_ABSY)
@@ -134,8 +141,8 @@ namespace emu6502test
 			_write(0x2030, "DC");
 			CPU->Run();
 			Assert::AreEqual(0xDC, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDA_ZPG)
@@ -144,8 +151,8 @@ namespace emu6502test
 			_write(0x0040, "DD");
 			CPU->Run();
 			Assert::AreEqual(0xDD, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDA_ZPGX)
@@ -154,8 +161,8 @@ namespace emu6502test
 			_write(0x0050, "DE");
 			CPU->Run();
 			Assert::AreEqual(0xDE, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDA_XIND)
@@ -165,8 +172,8 @@ namespace emu6502test
 			_write(0x3000, "DF");
 			CPU->Run();
 			Assert::AreEqual(0xDF, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDA_INDY)
@@ -176,8 +183,8 @@ namespace emu6502test
 			_write(0x4030, "E0");
 			CPU->Run();
 			Assert::AreEqual(0xE0, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDX_IMM)
@@ -185,8 +192,8 @@ namespace emu6502test
 			_write("A2 C7");
 			CPU->Run();
 			Assert::AreEqual(0xC7, (int)CPU->X);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDX_ABS)
@@ -195,8 +202,8 @@ namespace emu6502test
 			_write(0x2000, "C8");
 			CPU->Run();
 			Assert::AreEqual(0xC8, (int)CPU->X);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDX_ABSY)
@@ -205,8 +212,8 @@ namespace emu6502test
 			_write(0x2030, "C9");
 			CPU->Run();
 			Assert::AreEqual(0xC9, (int)CPU->X);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDX_ZPG)
@@ -215,8 +222,8 @@ namespace emu6502test
 			_write(0x0040, "DE");
 			CPU->Run();
 			Assert::AreEqual(0xDE, (int)CPU->X);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDX_ZPGY)
@@ -225,8 +232,8 @@ namespace emu6502test
 			_write(0x0011, "DF");
 			CPU->Run();
 			Assert::AreEqual(0xDF, (int)CPU->X);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDY_IMM)
@@ -234,8 +241,8 @@ namespace emu6502test
 			_write("A0 91");
 			CPU->Run();
 			Assert::AreEqual(0x91, (int)CPU->Y);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDY_ABS)
@@ -244,8 +251,8 @@ namespace emu6502test
 			_write(0x2000, "92");
 			CPU->Run();
 			Assert::AreEqual(0x92, (int)CPU->Y);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 		
 		TEST_METHOD(LDY_ABSX)
@@ -254,8 +261,8 @@ namespace emu6502test
 			_write(0x2030, "CA");
 			CPU->Run();
 			Assert::AreEqual(0xCA, (int)CPU->Y);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDY_ZPG)
@@ -264,8 +271,8 @@ namespace emu6502test
 			_write(0x0050, "DF");
 			CPU->Run();
 			Assert::AreEqual(0xDF, (int)CPU->Y);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LDY_ZPGX)
@@ -274,8 +281,8 @@ namespace emu6502test
 			_write(0x00A0, "E0");
 			CPU->Run();
 			Assert::AreEqual(0xE0, (int)CPU->Y);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 	};
 
@@ -402,8 +409,8 @@ namespace emu6502test
 			_write("A9 3A A2 FF AA");
 			CPU->Run();
 			Assert::AreEqual(0x3A, (int)CPU->X);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(TAY)
@@ -411,8 +418,8 @@ namespace emu6502test
 			_write("A9 3B A0 FF A8");
 			CPU->Run();
 			Assert::AreEqual(0x3B, (int)CPU->Y);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(TSX)
@@ -420,8 +427,8 @@ namespace emu6502test
 			_write("A2 FF BA");
 			CPU->Run();
 			Assert::AreEqual((int)CPU->S, (int)CPU->X);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(TXA)
@@ -429,8 +436,8 @@ namespace emu6502test
 			_write("A9 FF A2 D1 8A");
 			CPU->Run();
 			Assert::AreEqual(0xD1, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(TXS)
@@ -438,8 +445,8 @@ namespace emu6502test
 			_write("A2 D3 9A");
 			CPU->Run();
 			Assert::AreEqual(0xD3, (int)CPU->S);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(TYA)
@@ -447,8 +454,8 @@ namespace emu6502test
 			_write("A9 FF A0 D2 98");
 			CPU->Run();
 			Assert::AreEqual(0xD2, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 	};
 
@@ -573,8 +580,8 @@ namespace emu6502test
 			_write("A9 55 29 0F");
 			CPU->Run();
 			Assert::AreEqual(0x05, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(AND_ABS)
@@ -583,8 +590,8 @@ namespace emu6502test
 			_write(0x2000, "F0");
 			CPU->Run();
 			Assert::AreEqual(0x60, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(AND_ABSX)
@@ -593,8 +600,8 @@ namespace emu6502test
 			_write(0x2010, "0F");
 			CPU->Run();
 			Assert::AreEqual(0x07, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(AND_ABSY)
@@ -603,8 +610,8 @@ namespace emu6502test
 			_write(0x2020, "F0");
 			CPU->Run();
 			Assert::AreEqual(0x80, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(AND_ZPG)
@@ -613,8 +620,8 @@ namespace emu6502test
 			_write(0x0048, "0F");
 			CPU->Run();
 			Assert::AreEqual(0x09, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(AND_ZPGX)
@@ -623,8 +630,8 @@ namespace emu6502test
 			_write(0x0068, "55");
 			CPU->Run();
 			Assert::AreEqual(0x00, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_TRUE;
 		}
 
 		TEST_METHOD(AND_XIND)
@@ -634,8 +641,8 @@ namespace emu6502test
 			_write(0x2010, "0F");
 			CPU->Run();
 			Assert::AreEqual(0x0B, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(AND_INDY)
@@ -645,8 +652,8 @@ namespace emu6502test
 			_write(0x2028, "F0");
 			CPU->Run();
 			Assert::AreEqual(0xC0, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 	};
 
@@ -667,8 +674,8 @@ namespace emu6502test
 			_write("A9 05 09 A0");
 			CPU->Run();
 			Assert::AreEqual(0xA5, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ORA_ABS)
@@ -677,8 +684,8 @@ namespace emu6502test
 			_write(0x2000, "B0");
 			CPU->Run();
 			Assert::AreEqual(0xB6, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ORA_ABSX)
@@ -687,8 +694,8 @@ namespace emu6502test
 			_write(0x3020, "C0");
 			CPU->Run();
 			Assert::AreEqual(0xC7, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ORA_ABSY)
@@ -697,8 +704,8 @@ namespace emu6502test
 			_write(0x4030, "D0");
 			CPU->Run();
 			Assert::AreEqual(0xD8, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ORA_ZPG)
@@ -707,8 +714,8 @@ namespace emu6502test
 			_write(0x0078, "E0");
 			CPU->Run();
 			Assert::AreEqual(0xE9, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ORA_ZPGX)
@@ -717,8 +724,8 @@ namespace emu6502test
 			_write(0x0048, "F0");
 			CPU->Run();
 			Assert::AreEqual(0xFA, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ORA_XIND)
@@ -728,8 +735,8 @@ namespace emu6502test
 			_write(0x5010, "10");
 			CPU->Run();
 			Assert::AreEqual(0x1B, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ORA_INDY)
@@ -739,8 +746,8 @@ namespace emu6502test
 			_write(0x4020, "20");
 			CPU->Run();
 			Assert::AreEqual(0x2C, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 	};
 
@@ -761,8 +768,8 @@ namespace emu6502test
 			_write("A9 FF 49 AA");
 			CPU->Run();
 			Assert::AreEqual(0x55, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(EOR_ABS)
@@ -771,8 +778,8 @@ namespace emu6502test
 			_write(0x2000, "38");
 			CPU->Run();
 			Assert::AreEqual(0xC8, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(EOR_ABSX)
@@ -781,8 +788,8 @@ namespace emu6502test
 			_write(0x3010, "C8");
 			CPU->Run();
 			Assert::AreEqual(0xC1, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(EOR_ABSY)
@@ -791,8 +798,8 @@ namespace emu6502test
 			_write(0x3010, "8C");
 			CPU->Run();
 			Assert::AreEqual(0x1C, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(EOR_ZPG)
@@ -801,8 +808,8 @@ namespace emu6502test
 			_write(0x0088, "FF");
 			CPU->Run();
 			Assert::AreEqual(0xA5, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(EOR_ZPGX)
@@ -811,8 +818,8 @@ namespace emu6502test
 			_write(0x00A8, "F0");
 			CPU->Run();
 			Assert::AreEqual(0x55, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(EOR_XIND)
@@ -822,8 +829,8 @@ namespace emu6502test
 			_write(0x7100, "55");
 			CPU->Run();
 			Assert::AreEqual(0xAA, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(EOR_INDY)
@@ -833,8 +840,8 @@ namespace emu6502test
 			_write(0x2620, "AA");
 			CPU->Run();
 			Assert::AreEqual(0x55, (int)CPU->A);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 	};
 
@@ -855,9 +862,9 @@ namespace emu6502test
 			_write("A9 87 18 0A");
 			CPU->Run();
 			Assert::AreEqual(0x0E, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ASL_ABS)
@@ -866,9 +873,9 @@ namespace emu6502test
 			_write(0x2000, "55");
 			CPU->Run();
 			Assert::AreEqual(0xAA, (int)RAM[0x2000]);
-			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_FALSE;
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ASL_ABSX)
@@ -877,9 +884,9 @@ namespace emu6502test
 			_write(0x3080, "80");
 			CPU->Run();
 			Assert::AreEqual(0x00, (int)RAM[0x3080]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_TRUE;
 		}
 
 		TEST_METHOD(ASL_ZPG)
@@ -888,9 +895,9 @@ namespace emu6502test
 			_write(0x0020, "55");
 			CPU->Run();
 			Assert::AreEqual(0xAA, (int)RAM[0x0020]);
-			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_FALSE;
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ASL_ZPGX)
@@ -899,9 +906,9 @@ namespace emu6502test
 			_write(0x0060, "C0");
 			CPU->Run();
 			Assert::AreEqual(0x80, (int)RAM[0x0060]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LSR_A)
@@ -909,9 +916,9 @@ namespace emu6502test
 			_write("A9 87 4A");
 			CPU->Run();
 			Assert::AreEqual(0x43, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LSR_ABS)
@@ -920,9 +927,9 @@ namespace emu6502test
 			_write(0x2000, "55");
 			CPU->Run();
 			Assert::AreEqual(0x2A, (int)RAM[0x2000]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LSR_ABSX)
@@ -931,9 +938,9 @@ namespace emu6502test
 			_write(0x3080, "01");
 			CPU->Run();
 			Assert::AreEqual(0x00, (int)RAM[0x3080]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_TRUE;
 		}
 
 		TEST_METHOD(LSR_ZPG)
@@ -942,9 +949,9 @@ namespace emu6502test
 			_write(0x0020, "FF");
 			CPU->Run();
 			Assert::AreEqual(0x7F, (int)RAM[0x0020]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(LSR_ZPGX)
@@ -953,9 +960,9 @@ namespace emu6502test
 			_write(0x0060, "C0");
 			CPU->Run();
 			Assert::AreEqual(0x60, (int)RAM[0x0060]);
-			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_FALSE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 	};
 
@@ -976,9 +983,9 @@ namespace emu6502test
 			_write("A9 87 18 2A");
 			CPU->Run();
 			Assert::AreEqual(0x0E, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ROL_ABS)
@@ -987,9 +994,9 @@ namespace emu6502test
 			_write(0x2000, "55");
 			CPU->Run();
 			Assert::AreEqual(0xAB, (int)RAM[0x2000]);
-			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_FALSE;
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ROL_ABSX)
@@ -998,9 +1005,9 @@ namespace emu6502test
 			_write(0x3080, "80");
 			CPU->Run();
 			Assert::AreEqual(0x00, (int)RAM[0x3080]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_TRUE;
 		}
 
 		TEST_METHOD(ROL_ZPG)
@@ -1009,9 +1016,9 @@ namespace emu6502test
 			_write(0x0020, "55");
 			CPU->Run();
 			Assert::AreEqual(0xAA, (int)RAM[0x0020]);
-			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_FALSE;
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ROL_ZPGX)
@@ -1020,9 +1027,9 @@ namespace emu6502test
 			_write(0x0060, "C4");
 			CPU->Run();
 			Assert::AreEqual(0x88, (int)RAM[0x0060]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ROR_A)
@@ -1030,9 +1037,9 @@ namespace emu6502test
 			_write("A9 87 18 6A");
 			CPU->Run();
 			Assert::AreEqual(0x43, (int)CPU->A);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ROR_ABS)
@@ -1041,9 +1048,9 @@ namespace emu6502test
 			_write(0x2000, "55");
 			CPU->Run();
 			Assert::AreEqual(0x2A, (int)RAM[0x2000]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ROR_ABSX)
@@ -1052,9 +1059,9 @@ namespace emu6502test
 			_write(0x3080, "01");
 			CPU->Run();
 			Assert::AreEqual(0x80, (int)RAM[0x3080]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_TRUE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ROR_ZPG)
@@ -1063,9 +1070,9 @@ namespace emu6502test
 			_write(0x0020, "FF");
 			CPU->Run();
 			Assert::AreEqual(0x7F, (int)RAM[0x0020]);
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
 		}
 
 		TEST_METHOD(ROR_ZPGX)
@@ -1074,9 +1081,60 @@ namespace emu6502test
 			_write(0x0060, "C0");
 			CPU->Run();
 			Assert::AreEqual(0x60, (int)RAM[0x0060]);
-			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+			ASSERT_CARRY_FALSE;
+			ASSERT_NEGATIVE_FALSE;
+			ASSERT_ZERO_FALSE;
+		}
+	};
+
+	TEST_CLASS(Compare)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(CMP_IMM)
+		{
+			_write("A9 60 C9 61");
+			CPU->Run();
+			ASSERT_CARRY_FALSE;
+			ASSERT_ZERO_FALSE;
+			ASSERT_NEGATIVE_TRUE;
+		}
+
+		TEST_METHOD(CMP_ABS)
+		{
+			_write("A9 10 CD 00 30");
+			_write(0x3000, "F0");
+			CPU->Run();
+			ASSERT_CARRY_FALSE;
+			ASSERT_ZERO_FALSE;
+			ASSERT_NEGATIVE_FALSE;
+		}
+
+		TEST_METHOD(CMP_ABSX)
+		{
+			_write("A9 F0 A2 10 DD 00 30");
+			_write(0x3010, "F0");
+			CPU->Run();
+			ASSERT_CARRY_TRUE;
+			ASSERT_ZERO_TRUE;
+			ASSERT_NEGATIVE_FALSE;
+		}
+		TEST_METHOD(CMP_ABSY)
+		{
+			_write("A9 AA A0 20 D9 00 40");
+			_write(0x4020, "55");
+			CPU->Run();
+			ASSERT_CARRY_TRUE;
+			ASSERT_ZERO_FALSE;
+			ASSERT_NEGATIVE_FALSE;
 		}
 	};
 }
