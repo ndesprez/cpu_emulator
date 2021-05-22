@@ -1347,17 +1347,17 @@ namespace emu6502test
 
 		TEST_METHOD(CPY_IMM)
 		{
-			_write("A0 60 C0 61");
+			_write("A0 61 C0 60");
 			CPU->Run();
 			AssertLastInstruction("CPY", sImmediate);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertZero(false);
-			AssertNegative(true);
+			AssertNegative(false);
 		}
 
 		TEST_METHOD(CPY_ABS)
 		{
-			_write("A2 10 CC 00 30");
+			_write("A0 10 CC 00 30");
 			_write(0x3000, "F0");
 			CPU->Run();
 			AssertLastInstruction("CPY", sAbsolute);
@@ -1368,13 +1368,167 @@ namespace emu6502test
 
 		TEST_METHOD(CPY_ZPG)
 		{
-			_write("A2 10 C4 30");
-			_write(0x0030, "F0");
+			_write("A0 10 C4 30");
+			_write(0x0030, "F6");
 			CPU->Run();
 			AssertLastInstruction("CPY", sZeroPage);
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(false);
+		}
+	};
+
+	TEST_CLASS(Increment)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(INC_ABS)
+		{
+			_write("EE 00 20");
+			_write(0x2000, "30");
+			CPU->Run();
+			AssertLastInstruction("INC", sAbsolute);
+			Assert::AreEqual(0x31, (int)RAM[0x2000]);
+			AssertZero(false);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(INC_ABSX)
+		{
+			_write("A2 50 FE 00 30");
+			_write(0x3050, "FF");
+			CPU->Run();
+			AssertLastInstruction("INC", sAbsoluteX);
+			Assert::AreEqual(0x00, (int)RAM[0x3050]);
+			AssertZero(true);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(INC_ZPG)
+		{
+			_write("E6 20");
+			_write(0x0020, "7F");
+			CPU->Run();
+			AssertLastInstruction("INC", sZeroPage);
+			Assert::AreEqual(0x80, (int)RAM[0x0020]);
+			AssertZero(false);
+			AssertNegative(true);
+		}
+
+		TEST_METHOD(INC_ZPGX)
+		{
+			_write("A2 40 F6 40");
+			_write(0x0080, "FE");
+			CPU->Run();
+			AssertLastInstruction("INC", sZeroPageX);
+			Assert::AreEqual(0xFF, (int)RAM[0x0080]);
+			AssertZero(false);
+			AssertNegative(true);
+		}
+
+		TEST_METHOD(INX)
+		{
+			_write("A2 0F E8");
+			CPU->Run();
+			AssertLastInstruction("INX");
+			Assert::AreEqual(0x10, (int)CPU->X);
+			AssertZero(false);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(INY)
+		{
+			_write("A0 FF C8");
+			CPU->Run();
+			AssertLastInstruction("INY");
+			Assert::AreEqual(0x00, (int)CPU->Y);
+			AssertZero(true);
+			AssertNegative(false);
+		}
+	};
+
+	TEST_CLASS(Decrement)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(DEC_ABS)
+		{
+			_write("CE 00 20");
+			_write(0x2000, "30");
+			CPU->Run();
+			AssertLastInstruction("DEC", sAbsolute);
+			Assert::AreEqual(0x2F, (int)RAM[0x2000]);
+			AssertZero(false);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(DEC_ABSX)
+		{
+			_write("A2 50 DE 00 30");
+			_write(0x3050, "00");
+			CPU->Run();
+			AssertLastInstruction("DEC", sAbsoluteX);
+			Assert::AreEqual(0xFF, (int)RAM[0x3050]);
+			AssertZero(false);
+			AssertNegative(true);
+		}
+
+		TEST_METHOD(DEC_ZPG)
+		{
+			_write("C6 20");
+			_write(0x0020, "80");
+			CPU->Run();
+			AssertLastInstruction("DEC", sZeroPage);
+			Assert::AreEqual(0x7F, (int)RAM[0x0020]);
+			AssertZero(false);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(DEC_ZPGX)
+		{
+			_write("A2 40 D6 40");
+			_write(0x0080, "FF");
+			CPU->Run();
+			AssertLastInstruction("DEC", sZeroPageX);
+			Assert::AreEqual(0xFE, (int)RAM[0x0080]);
+			AssertZero(false);
+			AssertNegative(true);
+		}
+
+		TEST_METHOD(DEX)
+		{
+			_write("A2 0F CA");
+			CPU->Run();
+			AssertLastInstruction("DEX");
+			Assert::AreEqual(0x0E, (int)CPU->X);
+			AssertZero(false);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(DEY)
+		{
+			_write("A0 00 88");
+			CPU->Run();
+			AssertLastInstruction("DEY");
+			Assert::AreEqual(0xFF, (int)CPU->Y);
+			AssertZero(false);
+			AssertNegative(true);
 		}
 	};
 }
