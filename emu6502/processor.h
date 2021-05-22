@@ -171,7 +171,7 @@ protected:
 		{0x26, "ROL", sZeroPage, tAddress, &Processor::RotateLeft},
 		{0x2A, "ROL A", sImplied, tAccumulator, &Processor::RotateLeft},
 		{0x2E, "ROL", sAbsolute, tAddress, &Processor::RotateLeft},
-		{0x36, "ROL", sZeroPageX, tNone, &Processor::RotateLeft},
+		{0x36, "ROL", sZeroPageX, tAddress, &Processor::RotateLeft},
 		{0x3E, "ROL", sAbsoluteX, tAddress, &Processor::RotateLeft},
 		{0x66, "ROR", sZeroPage, tAddress, &Processor::RotateRight},
 		{0x6A, "ROR A", sImplied, tAccumulator, &Processor::RotateRight},
@@ -599,6 +599,9 @@ protected:
 
 		switch (in->Source)
 		{
+		case sImplied:
+			Source = nullptr;
+			break;
 		case sAccumulator:
 			Source = &A;
 			break;
@@ -626,9 +629,6 @@ protected:
 		case sImmediate:
 			ReadDataAtPC();
 			Source = &Data;
-			break;
-		case sImplied:
-			Source = nullptr;
 			break;
 		case sIndirect:
 			ReadAddressAtPC();
@@ -683,7 +683,7 @@ protected:
 			Target = &P;
 			break;
 		case tAddress:
-			Target = &Memory[Address];
+			Target = Source;
 			break;
 		default:
 			// unknown target ?

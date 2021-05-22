@@ -9,10 +9,12 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace emu6502test
 {
-	const wchar_t MessageNegativeFalse[] = L"Flag Negative is false.";
-	const wchar_t MessageNegativeTrue[] = L"Flag Negative is true.";
-	const wchar_t MessageZeroFalse[] = L"Flag Zero is false.";
-	const wchar_t MessageZeroTrue[] = L"Flag Zero is true.";
+	const wchar_t MessageNegativeFalse[] = L"Negative flag is false.";
+	const wchar_t MessageNegativeTrue[] = L"Negative flag is true.";
+	const wchar_t MessageZeroFalse[] = L"Zero flag is false.";
+	const wchar_t MessageZeroTrue[] = L"Zero flag is true.";
+	const wchar_t MessageCarryFalse[] = L"Carry flag is false.";
+	const wchar_t MessageCarryTrue[] = L"Carry flag is true.";
 
 	Processor	*CPU;
 	byte		*RAM;
@@ -783,6 +785,16 @@ namespace emu6502test
 			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
 		}
 
+		TEST_METHOD(EOR_ABSY)
+		{
+			_write("A9 90 A2 10 5D 00 30");
+			_write(0x3010, "8C");
+			CPU->Run();
+			Assert::AreEqual(0x1C, (int)CPU->A);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
 		TEST_METHOD(EOR_ZPG)
 		{
 			_write("A9 5A 45 88");
@@ -811,6 +823,259 @@ namespace emu6502test
 			CPU->Run();
 			Assert::AreEqual(0xAA, (int)CPU->A);
 			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(EOR_INDY)
+		{
+			_write("A9 FF A0 20 51 20");
+			_write(0x0020, "00 26");
+			_write(0x2620, "AA");
+			CPU->Run();
+			Assert::AreEqual(0x55, (int)CPU->A);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+	};
+
+	TEST_CLASS(Shift)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(ASL_A)
+		{
+			_write("A9 87 18 0A");
+			CPU->Run();
+			Assert::AreEqual(0x0E, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ASL_ABS)
+		{
+			_write("18 0E 00 20");
+			_write(0x2000, "55");
+			CPU->Run();
+			Assert::AreEqual(0xAA, (int)RAM[0x2000]);
+			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ASL_ABSX)
+		{
+			_write("A2 30 18 1E 50 30");
+			_write(0x3080, "80");
+			CPU->Run();
+			Assert::AreEqual(0x00, (int)RAM[0x3080]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
+		}
+
+		TEST_METHOD(ASL_ZPG)
+		{
+			_write("18 06 20");
+			_write(0x0020, "55");
+			CPU->Run();
+			Assert::AreEqual(0xAA, (int)RAM[0x0020]);
+			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ASL_ZPGX)
+		{
+			_write("A2 30 18 16 30");
+			_write(0x0060, "C0");
+			CPU->Run();
+			Assert::AreEqual(0x80, (int)RAM[0x0060]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(LSR_A)
+		{
+			_write("A9 87 4A");
+			CPU->Run();
+			Assert::AreEqual(0x43, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(LSR_ABS)
+		{
+			_write("4E 00 20");
+			_write(0x2000, "55");
+			CPU->Run();
+			Assert::AreEqual(0x2A, (int)RAM[0x2000]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(LSR_ABSX)
+		{
+			_write("A2 30 5E 50 30");
+			_write(0x3080, "01");
+			CPU->Run();
+			Assert::AreEqual(0x00, (int)RAM[0x3080]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
+		}
+
+		TEST_METHOD(LSR_ZPG)
+		{
+			_write("46 20");
+			_write(0x0020, "FF");
+			CPU->Run();
+			Assert::AreEqual(0x7F, (int)RAM[0x0020]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(LSR_ZPGX)
+		{
+			_write("A2 30 56 30");
+			_write(0x0060, "C0");
+			CPU->Run();
+			Assert::AreEqual(0x60, (int)RAM[0x0060]);
+			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+	};
+
+	TEST_CLASS(Rotate)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(ROL_A)
+		{
+			_write("A9 87 18 2A");
+			CPU->Run();
+			Assert::AreEqual(0x0E, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ROL_ABS)
+		{
+			_write("38 2E 00 20");
+			_write(0x2000, "55");
+			CPU->Run();
+			Assert::AreEqual(0xAB, (int)RAM[0x2000]);
+			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ROL_ABSX)
+		{
+			_write("A2 30 18 3E 50 30");
+			_write(0x3080, "80");
+			CPU->Run();
+			Assert::AreEqual(0x00, (int)RAM[0x3080]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
+		}
+
+		TEST_METHOD(ROL_ZPG)
+		{
+			_write("18 26 20");
+			_write(0x0020, "55");
+			CPU->Run();
+			Assert::AreEqual(0xAA, (int)RAM[0x0020]);
+			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ROL_ZPGX)
+		{
+			_write("A2 30 18 36 30");
+			_write(0x0060, "C4");
+			CPU->Run();
+			Assert::AreEqual(0x88, (int)RAM[0x0060]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ROR_A)
+		{
+			_write("A9 87 18 6A");
+			CPU->Run();
+			Assert::AreEqual(0x43, (int)CPU->A);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ROR_ABS)
+		{
+			_write("18 6E 00 20");
+			_write(0x2000, "55");
+			CPU->Run();
+			Assert::AreEqual(0x2A, (int)RAM[0x2000]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ROR_ABSX)
+		{
+			_write("A2 30 38 7E 50 30");
+			_write(0x3080, "01");
+			CPU->Run();
+			Assert::AreEqual(0x80, (int)RAM[0x3080]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ROR_ZPG)
+		{
+			_write("18 66 20");
+			_write(0x0020, "FF");
+			CPU->Run();
+			Assert::AreEqual(0x7F, (int)RAM[0x0020]);
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+		}
+
+		TEST_METHOD(ROR_ZPGX)
+		{
+			_write("A2 30 18 76 30");
+			_write(0x0060, "C0");
+			CPU->Run();
+			Assert::AreEqual(0x60, (int)RAM[0x0060]);
+			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
 			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
 		}
 	};

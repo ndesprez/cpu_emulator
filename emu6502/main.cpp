@@ -1,7 +1,59 @@
+#include <assert.h>
+#include <ctype.h>
+
 #include "processor.h"
 
 Processor *CPU;
 byte	  *RAM;
+
+word		WriteCounter;
+
+void _write(char const *Data, bool AddBreak = true)
+{
+	byte value;
+	word i = 0;
+	bool high = true;
+
+	while (char c = Data[i])
+	{
+		if (c == ' ')
+		{
+			assert(high == true);
+			i++;
+			continue;
+		}
+
+		assert(isxdigit(c));
+
+		if (high)
+			value = 0;
+
+		if (c >= '0' && c <= '9')
+			value |= c - 0x30;
+		else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f')
+			value |= (c | 0x20) - 0x57;
+
+		if (high)
+			value <<= 4;
+		else
+			RAM[WriteCounter++] = value;
+
+		high = !high;
+		i++;
+	}
+	assert(high == true);
+
+	if (AddBreak)
+	{
+		RAM[WriteCounter] = 0x00;
+	}
+}
+
+void _write(word Address, char const *Data, bool AddBreak = false)
+{
+	WriteCounter = Address;
+	_write(Data, AddBreak);
+}
 
 int main(void)
 {
@@ -10,23 +62,15 @@ int main(void)
 	// set PC vector to 0x1000
 	RAM[0xFFFC] = 0x00;
 	RAM[0xFFFD] = 0x10;
-/*
-	RAM[0x1000] = 0xA2;
-	RAM[0x1001] = 0x20;
-	RAM[0x1002] = 0xA1;
-	RAM[0x1003] = 0x20;
-	RAM[0x0040] = 0x00;
-	RAM[0x0041] = 0x30;
-	RAM[0x3000] = 0xDF;
-*/
-
-	RAM[0x1000] = 0x38;
 
 	CPU = new Processor(RAM);
+	CPU->EndOnBreak = true;
 	CPU->SendRST();
-	CPU->Step(2);
-
-	bool f = CPU->FlagCarry();
+	CPU->Step();
+	WriteCounter = CPU->PC;
+	_write("A2 30 18 36 30");
+	_write(0x0060, "C4");
+	CPU->Run();
 
 	delete CPU;
 	delete[] RAM;
