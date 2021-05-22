@@ -21,25 +21,42 @@ namespace emu6502test
 	byte		*RAM;
 	word		WriteCounter;
 
-	void ASSERT_NEGATIVE_TRUE()		{ Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse); }
-	void ASSERT_NEGATIVE_FALSE()	{ Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue); }
-	void ASSERT_ZERO_TRUE()			{ Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse); }
-	void ASSERT_ZERO_FALSE()		{ Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue); }
-	void ASSERT_CARRY_TRUE()		{ Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse); }
-	void ASSERT_CARRY_FALSE()		{ Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue); }
+	void AssertNegative(bool Value)		
+	{ 
+		if(Value)
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse); 
+		else
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+	}
 
-	// ASSERT_LAST: making sure the last instruction we ran is the one we're testing
-	void ASSERT_LAST(const char *Name)
+	void AssertZero(bool Value)
+	{
+		if (Value)
+			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
+		else
+			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
+	}
+
+	void AssertCarry(bool Value)
+	{
+		if(Value)
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+		else
+			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+	}
+
+	// AssertLastInstruction: making sure the last instruction we ran is the one we're testing
+	void AssertLastInstruction(const char *Name)
 	{
 		Assert::IsTrue(CPU->IsLastInstruction(Name), MessageMismatch);
 	}
 
-	void ASSERT_LAST(const char *Name, SourceType Source) 
+	void AssertLastInstruction(const char *Name, SourceType Source) 
 	{
 		Assert::IsTrue(CPU->IsLastInstruction(Name, Source), MessageMismatch);
 	}
 
-	void ASSERT_LAST(const char *Name, SourceType Source, TargetType Target)
+	void AssertLastInstruction(const char *Name, SourceType Source, TargetType Target)
 	{
 		Assert::IsTrue(CPU->IsLastInstruction(Name, Source, Target), MessageMismatch);
 	}
@@ -127,10 +144,10 @@ namespace emu6502test
 		{
 			_write("A9 D5");
 			CPU->Run();
-			ASSERT_LAST("LDA", sImmediate);
+			AssertLastInstruction("LDA", sImmediate);
 			Assert::AreEqual(0xD5, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDA_ABS)
@@ -138,10 +155,10 @@ namespace emu6502test
 			_write("AD 00 20");
 			_write(0x2000, "7A");
 			CPU->Run();
-			ASSERT_LAST("LDA", sAbsolute);
+			AssertLastInstruction("LDA", sAbsolute);
 			Assert::AreEqual(0x7A, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDA_ABSX)
@@ -149,10 +166,10 @@ namespace emu6502test
 			_write("A2 20 BD 00 20");
 			_write(0x2020, "DB");
 			CPU->Run();
-			ASSERT_LAST("LDA", sAbsoluteX);
+			AssertLastInstruction("LDA", sAbsoluteX);
 			Assert::AreEqual(0xDB, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDA_ABSY)
@@ -160,10 +177,10 @@ namespace emu6502test
 			_write("A0 30 B9 00 20");
 			_write(0x2030, "DC");
 			CPU->Run();
-			ASSERT_LAST("LDA", sAbsoluteY);
+			AssertLastInstruction("LDA", sAbsoluteY);
 			Assert::AreEqual(0xDC, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDA_ZPG)
@@ -171,10 +188,10 @@ namespace emu6502test
 			_write("A5 40");
 			_write(0x0040, "DD");
 			CPU->Run();
-			ASSERT_LAST("LDA", sZeroPage);
+			AssertLastInstruction("LDA", sZeroPage);
 			Assert::AreEqual(0xDD, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDA_ZPGX)
@@ -182,10 +199,10 @@ namespace emu6502test
 			_write("A2 10 B5 40");
 			_write(0x0050, "DE");
 			CPU->Run();
-			ASSERT_LAST("LDA", sZeroPageX);
+			AssertLastInstruction("LDA", sZeroPageX);
 			Assert::AreEqual(0xDE, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDA_XIND)
@@ -194,10 +211,10 @@ namespace emu6502test
 			_write(0x0040, "00 30");
 			_write(0x3000, "DF");
 			CPU->Run();
-			ASSERT_LAST("LDA", sXIndirect);
+			AssertLastInstruction("LDA", sXIndirect);
 			Assert::AreEqual(0xDF, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDA_INDY)
@@ -206,20 +223,20 @@ namespace emu6502test
 			_write(0x0020, "00 40");
 			_write(0x4030, "E0");
 			CPU->Run();
-			ASSERT_LAST("LDA", sIndirectY);
+			AssertLastInstruction("LDA", sIndirectY);
 			Assert::AreEqual(0xE0, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDX_IMM)
 		{
 			_write("A2 C7");
 			CPU->Run();
-			ASSERT_LAST("LDX", sImmediate);
+			AssertLastInstruction("LDX", sImmediate);
 			Assert::AreEqual(0xC7, (int)CPU->X);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDX_ABS)
@@ -227,10 +244,10 @@ namespace emu6502test
 			_write("AE 00 20");
 			_write(0x2000, "C8");
 			CPU->Run();
-			ASSERT_LAST("LDX", sAbsolute);
+			AssertLastInstruction("LDX", sAbsolute);
 			Assert::AreEqual(0xC8, (int)CPU->X);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDX_ABSY)
@@ -238,10 +255,10 @@ namespace emu6502test
 			_write("A0 30 BE 00 20");
 			_write(0x2030, "C9");
 			CPU->Run();
-			ASSERT_LAST("LDX", sAbsoluteY);
+			AssertLastInstruction("LDX", sAbsoluteY);
 			Assert::AreEqual(0xC9, (int)CPU->X);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDX_ZPG)
@@ -249,10 +266,10 @@ namespace emu6502test
 			_write("A6 40");
 			_write(0x0040, "DE");
 			CPU->Run();
-			ASSERT_LAST("LDX", sZeroPage);
+			AssertLastInstruction("LDX", sZeroPage);
 			Assert::AreEqual(0xDE, (int)CPU->X);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDX_ZPGY)
@@ -260,20 +277,20 @@ namespace emu6502test
 			_write("A0 91 B6 80");
 			_write(0x0011, "DF");
 			CPU->Run();
-			ASSERT_LAST("LDX", sZeroPageY);
+			AssertLastInstruction("LDX", sZeroPageY);
 			Assert::AreEqual(0xDF, (int)CPU->X);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDY_IMM)
 		{
 			_write("A0 91");
 			CPU->Run();
-			ASSERT_LAST("LDY", sImmediate);
+			AssertLastInstruction("LDY", sImmediate);
 			Assert::AreEqual(0x91, (int)CPU->Y);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDY_ABS)
@@ -281,10 +298,10 @@ namespace emu6502test
 			_write("AC 00 20");
 			_write(0x2000, "92");
 			CPU->Run();
-			ASSERT_LAST("LDY", sAbsolute);
+			AssertLastInstruction("LDY", sAbsolute);
 			Assert::AreEqual(0x92, (int)CPU->Y);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 		
 		TEST_METHOD(LDY_ABSX)
@@ -292,10 +309,10 @@ namespace emu6502test
 			_write("A2 30 BC 00 20");
 			_write(0x2030, "CA");
 			CPU->Run();
-			ASSERT_LAST("LDY", sAbsoluteX);
+			AssertLastInstruction("LDY", sAbsoluteX);
 			Assert::AreEqual(0xCA, (int)CPU->Y);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDY_ZPG)
@@ -303,10 +320,10 @@ namespace emu6502test
 			_write("A4 50");
 			_write(0x0050, "DF");
 			CPU->Run();
-			ASSERT_LAST("LDY", sZeroPage);
+			AssertLastInstruction("LDY", sZeroPage);
 			Assert::AreEqual(0xDF, (int)CPU->Y);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LDY_ZPGX)
@@ -314,10 +331,10 @@ namespace emu6502test
 			_write("A2 20 B4 80");
 			_write(0x00A0, "E0");
 			CPU->Run();
-			ASSERT_LAST("LDY", sZeroPageX);
+			AssertLastInstruction("LDY", sZeroPageX);
 			Assert::AreEqual(0xE0, (int)CPU->Y);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 	};
 
@@ -337,7 +354,7 @@ namespace emu6502test
 		{
 			_write("A9 D5 8D 00 20");
 			CPU->Run();
-			ASSERT_LAST("STA", sAbsolute);
+			AssertLastInstruction("STA", sAbsolute);
 			Assert::AreEqual(0xD5, (int)RAM[0x2000]);
 		}
 
@@ -345,7 +362,7 @@ namespace emu6502test
 		{
 			_write("A9 D6 A2 C7 9D 00 20");
 			CPU->Run();
-			ASSERT_LAST("STA", sAbsoluteX);
+			AssertLastInstruction("STA", sAbsoluteX);
 			Assert::AreEqual(0xD6, (int)RAM[0x20C7]);
 		}
 
@@ -353,7 +370,7 @@ namespace emu6502test
 		{
 			_write("A9 D7 A0 B7 99 00 20");
 			CPU->Run();
-			ASSERT_LAST("STA", sAbsoluteY);
+			AssertLastInstruction("STA", sAbsoluteY);
 			Assert::AreEqual(0xD7, (int)RAM[0x20B7]);
 		}
 
@@ -361,7 +378,7 @@ namespace emu6502test
 		{
 			_write("A9 D8 85 20");
 			CPU->Run();
-			ASSERT_LAST("STA", sZeroPage);
+			AssertLastInstruction("STA", sZeroPage);
 			Assert::AreEqual(0xD8, (int)RAM[0x0020]);
 		}
 
@@ -369,7 +386,7 @@ namespace emu6502test
 		{
 			_write("A9 D9 A2 10 95 20");
 			CPU->Run();
-			ASSERT_LAST("STA", sZeroPageX);
+			AssertLastInstruction("STA", sZeroPageX);
 			Assert::AreEqual(0xD9, (int)RAM[0x0030]);
 		}
 
@@ -378,7 +395,7 @@ namespace emu6502test
 			_write("A9 DA A2 10 81 20");
 			_write(0x0030, "16 20");
 			CPU->Run();
-			ASSERT_LAST("STA", sXIndirect);
+			AssertLastInstruction("STA", sXIndirect);
 			Assert::AreEqual(0xDA, (int)RAM[0x2016]);
 		}
 
@@ -387,7 +404,7 @@ namespace emu6502test
 			_write("A9 DB A0 20 91 60");
 			_write(0x0060, "11 30");
 			CPU->Run();
-			ASSERT_LAST("STA", sIndirectY);
+			AssertLastInstruction("STA", sIndirectY);
 			Assert::AreEqual(0xDB, (int)RAM[0x3031]);
 		}
 
@@ -395,7 +412,7 @@ namespace emu6502test
 		{
 			_write("A2 75 8E 00 21");
 			CPU->Run();
-			ASSERT_LAST("STX", sAbsolute);
+			AssertLastInstruction("STX", sAbsolute);
 			Assert::AreEqual(0x75, (int)RAM[0x2100]);
 		}
 
@@ -403,7 +420,7 @@ namespace emu6502test
 		{
 			_write("A2 77 86 38");
 			CPU->Run();
-			ASSERT_LAST("STX", sZeroPage);
+			AssertLastInstruction("STX", sZeroPage);
 			Assert::AreEqual(0x77, (int)RAM[0x0038]);
 		}
 
@@ -411,7 +428,7 @@ namespace emu6502test
 		{
 			_write("A2 76 A0 10 96 40");
 			CPU->Run();
-			ASSERT_LAST("STX", sZeroPageY);
+			AssertLastInstruction("STX", sZeroPageY);
 			Assert::AreEqual(0x76, (int)RAM[0x0050]);
 		}
 
@@ -419,7 +436,7 @@ namespace emu6502test
 		{
 			_write("A0 11 8C 10 40");
 			CPU->Run();
-			ASSERT_LAST("STY", sAbsolute);
+			AssertLastInstruction("STY", sAbsolute);
 			Assert::AreEqual(0x11, (int)RAM[0x4010]);
 		}
 
@@ -427,7 +444,7 @@ namespace emu6502test
 		{
 			_write("A0 12 84 45");
 			CPU->Run();
-			ASSERT_LAST("STY", sZeroPage);
+			AssertLastInstruction("STY", sZeroPage);
 			Assert::AreEqual(0x12, (int)RAM[0x0045]);
 		}
 
@@ -435,7 +452,7 @@ namespace emu6502test
 		{
 			_write("A0 13 A2 20 94 60");
 			CPU->Run();
-			ASSERT_LAST("STY", sZeroPageX);
+			AssertLastInstruction("STY", sZeroPageX);
 			Assert::AreEqual(0x13, (int)RAM[0x0080]);
 		}
 	};
@@ -456,20 +473,20 @@ namespace emu6502test
 		{
 			_write("A9 3A A2 FF AA");
 			CPU->Run();
-			ASSERT_LAST("TAX");
+			AssertLastInstruction("TAX");
 			Assert::AreEqual(0x3A, (int)CPU->X);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(TAY)
 		{
 			_write("A9 3B A0 FF A8");
 			CPU->Run();
-			ASSERT_LAST("TAY");
+			AssertLastInstruction("TAY");
 			Assert::AreEqual(0x3B, (int)CPU->Y);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(TSX)
@@ -477,38 +494,38 @@ namespace emu6502test
 			_write("A2 FF BA");
 			CPU->Run();
 			Assert::AreEqual((int)CPU->S, (int)CPU->X);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(TXA)
 		{
 			_write("A9 FF A2 D1 8A");
 			CPU->Run();
-			ASSERT_LAST("TXA");
+			AssertLastInstruction("TXA");
 			Assert::AreEqual(0xD1, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(TXS)
 		{
 			_write("A2 D3 9A");
 			CPU->Run();
-			ASSERT_LAST("TXS");
+			AssertLastInstruction("TXS");
 			Assert::AreEqual(0xD3, (int)CPU->S);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(TYA)
 		{
 			_write("A9 FF A0 D2 98");
 			CPU->Run();
-			ASSERT_LAST("TYA");
+			AssertLastInstruction("TYA");
 			Assert::AreEqual(0xD2, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 	};
 
@@ -529,7 +546,7 @@ namespace emu6502test
 		{
 			_write("A9 5A 48");
 			CPU->Run();
-			ASSERT_LAST("PHA");
+			AssertLastInstruction("PHA");
 			Assert::AreEqual(RAM[(word)CPU->S + 0x100 + 1], CPU->A);
 		}
 
@@ -537,7 +554,7 @@ namespace emu6502test
 		{
 			_write("A9 6A 48 A9 FF 68");
 			CPU->Run();
-			ASSERT_LAST("PLA");
+			AssertLastInstruction("PLA");
 			Assert::AreEqual(0x6A, (int)CPU->A);
 		}
 
@@ -545,7 +562,7 @@ namespace emu6502test
 		{
 			_write("08");
 			CPU->Run();
-			ASSERT_LAST("PHP");
+			AssertLastInstruction("PHP");
 			Assert::AreEqual(RAM[(word)CPU->S + 0x100 + 1], CPU->P);
 		}
 
@@ -553,7 +570,7 @@ namespace emu6502test
 		{
 			_write("A9 31 48 28");
 			CPU->Run();
-			ASSERT_LAST("PLP");
+			AssertLastInstruction("PLP");
 			Assert::AreEqual(0x31, (int)CPU->P);
 		}
 	};
@@ -574,7 +591,7 @@ namespace emu6502test
 		{
 			_write("38");
 			CPU->Run();
-			ASSERT_LAST("SEC");
+			AssertLastInstruction("SEC");
 			Assert::IsTrue(CPU->FlagCarry());
 		}
 
@@ -582,7 +599,7 @@ namespace emu6502test
 		{
 			_write("F8");
 			CPU->Run();
-			ASSERT_LAST("SED");
+			AssertLastInstruction("SED");
 			Assert::IsTrue(CPU->FlagDecimal());
 		}
 
@@ -590,7 +607,7 @@ namespace emu6502test
 		{
 			_write("78");
 			CPU->Run();
-			ASSERT_LAST("SEI");
+			AssertLastInstruction("SEI");
 			Assert::IsTrue(CPU->FlagInterrupt());
 		}
 
@@ -598,7 +615,7 @@ namespace emu6502test
 		{
 			_write("38 18");
 			CPU->Run();
-			ASSERT_LAST("CLC");
+			AssertLastInstruction("CLC");
 			Assert::IsFalse(CPU->FlagCarry());
 		}
 
@@ -606,7 +623,7 @@ namespace emu6502test
 		{
 			_write("F8 D8");
 			CPU->Run();
-			ASSERT_LAST("CLD");
+			AssertLastInstruction("CLD");
 			Assert::IsFalse(CPU->FlagDecimal());
 		}
 
@@ -614,7 +631,7 @@ namespace emu6502test
 		{
 			_write("78 58");
 			CPU->Run();
-			ASSERT_LAST("CLI");
+			AssertLastInstruction("CLI");
 			Assert::IsFalse(CPU->FlagInterrupt());
 		}
 
@@ -622,7 +639,7 @@ namespace emu6502test
 		{
 			_write("A9 40 48 28 B8");
 			CPU->Run();
-			ASSERT_LAST("CLV");
+			AssertLastInstruction("CLV");
 			Assert::IsFalse(CPU->FlagOverflow());
 		}
 	};
@@ -643,10 +660,10 @@ namespace emu6502test
 		{
 			_write("A9 55 29 0F");
 			CPU->Run();
-			ASSERT_LAST("AND", sImmediate);
+			AssertLastInstruction("AND", sImmediate);
 			Assert::AreEqual(0x05, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(AND_ABS)
@@ -654,10 +671,10 @@ namespace emu6502test
 			_write("A9 66 2D 00 20");
 			_write(0x2000, "F0");
 			CPU->Run();
-			ASSERT_LAST("AND", sAbsolute);
+			AssertLastInstruction("AND", sAbsolute);
 			Assert::AreEqual(0x60, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(AND_ABSX)
@@ -665,10 +682,10 @@ namespace emu6502test
 			_write("A9 77 A2 10 3D 00 20");
 			_write(0x2010, "0F");
 			CPU->Run();
-			ASSERT_LAST("AND", sAbsoluteX);
+			AssertLastInstruction("AND", sAbsoluteX);
 			Assert::AreEqual(0x07, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(AND_ABSY)
@@ -676,10 +693,10 @@ namespace emu6502test
 			_write("A9 88 A0 20 39 00 20");
 			_write(0x2020, "F0");
 			CPU->Run();
-			ASSERT_LAST("AND", sAbsoluteY);
+			AssertLastInstruction("AND", sAbsoluteY);
 			Assert::AreEqual(0x80, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(AND_ZPG)
@@ -687,10 +704,10 @@ namespace emu6502test
 			_write("A9 99 25 48");
 			_write(0x0048, "0F");
 			CPU->Run();
-			ASSERT_LAST("AND", sZeroPage);
+			AssertLastInstruction("AND", sZeroPage);
 			Assert::AreEqual(0x09, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(AND_ZPGX)
@@ -698,10 +715,10 @@ namespace emu6502test
 			_write("A9 AA A2 10 35 58");
 			_write(0x0068, "55");
 			CPU->Run();
-			ASSERT_LAST("AND", sZeroPageX);
+			AssertLastInstruction("AND", sZeroPageX);
 			Assert::AreEqual(0x00, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_TRUE();
+			AssertNegative(false);
+			AssertZero(true);
 		}
 
 		TEST_METHOD(AND_XIND)
@@ -710,10 +727,10 @@ namespace emu6502test
 			_write(0x00A0, "10 20");
 			_write(0x2010, "0F");
 			CPU->Run();
-			ASSERT_LAST("AND", sXIndirect);
+			AssertLastInstruction("AND", sXIndirect);
 			Assert::AreEqual(0x0B, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(AND_INDY)
@@ -722,10 +739,10 @@ namespace emu6502test
 			_write(0x0035, "10 20");
 			_write(0x2028, "F0");
 			CPU->Run();
-			ASSERT_LAST("AND", sIndirectY);
+			AssertLastInstruction("AND", sIndirectY);
 			Assert::AreEqual(0xC0, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 	};
 
@@ -745,10 +762,10 @@ namespace emu6502test
 		{
 			_write("A9 05 09 A0");
 			CPU->Run();
-			ASSERT_LAST("ORA", sImmediate);
+			AssertLastInstruction("ORA", sImmediate);
 			Assert::AreEqual(0xA5, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ORA_ABS)
@@ -756,10 +773,10 @@ namespace emu6502test
 			_write("A9 06 0D 00 20");
 			_write(0x2000, "B0");
 			CPU->Run();
-			ASSERT_LAST("ORA", sAbsolute);
+			AssertLastInstruction("ORA", sAbsolute);
 			Assert::AreEqual(0xB6, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ORA_ABSX)
@@ -767,10 +784,10 @@ namespace emu6502test
 			_write("A9 07 A2 20 1D 00 30");
 			_write(0x3020, "C0");
 			CPU->Run();
-			ASSERT_LAST("ORA", sAbsoluteX);
+			AssertLastInstruction("ORA", sAbsoluteX);
 			Assert::AreEqual(0xC7, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ORA_ABSY)
@@ -778,10 +795,10 @@ namespace emu6502test
 			_write("A9 08 A0 30 19 00 40");
 			_write(0x4030, "D0");
 			CPU->Run();
-			ASSERT_LAST("ORA", sAbsoluteY);
+			AssertLastInstruction("ORA", sAbsoluteY);
 			Assert::AreEqual(0xD8, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ORA_ZPG)
@@ -789,10 +806,10 @@ namespace emu6502test
 			_write("A9 09 05 78");
 			_write(0x0078, "E0");
 			CPU->Run();
-			ASSERT_LAST("ORA", sZeroPage);
+			AssertLastInstruction("ORA", sZeroPage);
 			Assert::AreEqual(0xE9, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ORA_ZPGX)
@@ -800,10 +817,10 @@ namespace emu6502test
 			_write("A9 0A A2 10 15 38");
 			_write(0x0048, "F0");
 			CPU->Run();
-			ASSERT_LAST("ORA", sZeroPageX);
+			AssertLastInstruction("ORA", sZeroPageX);
 			Assert::AreEqual(0xFA, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ORA_XIND)
@@ -812,10 +829,10 @@ namespace emu6502test
 			_write(0x0078, "10 50");
 			_write(0x5010, "10");
 			CPU->Run();
-			ASSERT_LAST("ORA", sXIndirect);
+			AssertLastInstruction("ORA", sXIndirect);
 			Assert::AreEqual(0x1B, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ORA_INDY)
@@ -824,10 +841,10 @@ namespace emu6502test
 			_write(0x0060, "00 40");
 			_write(0x4020, "20");
 			CPU->Run();
-			ASSERT_LAST("ORA", sIndirectY);
+			AssertLastInstruction("ORA", sIndirectY);
 			Assert::AreEqual(0x2C, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 	};
 
@@ -847,10 +864,10 @@ namespace emu6502test
 		{
 			_write("A9 FF 49 AA");
 			CPU->Run();
-			ASSERT_LAST("EOR", sImmediate);
+			AssertLastInstruction("EOR", sImmediate);
 			Assert::AreEqual(0x55, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(EOR_ABS)
@@ -858,10 +875,10 @@ namespace emu6502test
 			_write("A9 F0 4D 00 20");
 			_write(0x2000, "38");
 			CPU->Run();
-			ASSERT_LAST("EOR", sAbsolute);
+			AssertLastInstruction("EOR", sAbsolute);
 			Assert::AreEqual(0xC8, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(EOR_ABSX)
@@ -869,10 +886,10 @@ namespace emu6502test
 			_write("A9 09 A2 10 5D 00 30");
 			_write(0x3010, "C8");
 			CPU->Run();
-			ASSERT_LAST("EOR", sAbsoluteX);
+			AssertLastInstruction("EOR", sAbsoluteX);
 			Assert::AreEqual(0xC1, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(EOR_ABSY)
@@ -880,10 +897,10 @@ namespace emu6502test
 			_write("A9 90 A0 20 59 00 30");
 			_write(0x3020, "8C");
 			CPU->Run();
-			ASSERT_LAST("EOR", sAbsoluteY);
+			AssertLastInstruction("EOR", sAbsoluteY);
 			Assert::AreEqual(0x1C, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(EOR_ZPG)
@@ -891,10 +908,10 @@ namespace emu6502test
 			_write("A9 5A 45 88");
 			_write(0x0088, "FF");
 			CPU->Run();
-			ASSERT_LAST("EOR", sZeroPage);
+			AssertLastInstruction("EOR", sZeroPage);
 			Assert::AreEqual(0xA5, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(EOR_ZPGX)
@@ -902,10 +919,10 @@ namespace emu6502test
 			_write("A9 A5 A2 10 55 98");
 			_write(0x00A8, "F0");
 			CPU->Run();
-			ASSERT_LAST("EOR", sZeroPageX);
+			AssertLastInstruction("EOR", sZeroPageX);
 			Assert::AreEqual(0x55, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(EOR_XIND)
@@ -914,10 +931,10 @@ namespace emu6502test
 			_write(0x0060, "00 71");
 			_write(0x7100, "55");
 			CPU->Run();
-			ASSERT_LAST("EOR", sXIndirect);
+			AssertLastInstruction("EOR", sXIndirect);
 			Assert::AreEqual(0xAA, (int)CPU->A);
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(EOR_INDY)
@@ -926,10 +943,10 @@ namespace emu6502test
 			_write(0x0020, "00 26");
 			_write(0x2620, "AA");
 			CPU->Run();
-			ASSERT_LAST("EOR", sIndirectY);
+			AssertLastInstruction("EOR", sIndirectY);
 			Assert::AreEqual(0x55, (int)CPU->A);
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertNegative(false);
+			AssertZero(false);
 		}
 	};
 
@@ -949,11 +966,11 @@ namespace emu6502test
 		{
 			_write("A9 87 18 0A");
 			CPU->Run();
-			ASSERT_LAST("ASL A");
+			AssertLastInstruction("ASL A");
 			Assert::AreEqual(0x0E, (int)CPU->A);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ASL_ABS)
@@ -961,11 +978,11 @@ namespace emu6502test
 			_write("18 0E 00 20");
 			_write(0x2000, "55");
 			CPU->Run();
-			ASSERT_LAST("ASL", sAbsolute);
+			AssertLastInstruction("ASL", sAbsolute);
 			Assert::AreEqual(0xAA, (int)RAM[0x2000]);
-			ASSERT_CARRY_FALSE();
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(false);
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ASL_ABSX)
@@ -973,11 +990,11 @@ namespace emu6502test
 			_write("A2 30 18 1E 50 30");
 			_write(0x3080, "80");
 			CPU->Run();
-			ASSERT_LAST("ASL", sAbsoluteX);
+			AssertLastInstruction("ASL", sAbsoluteX);
 			Assert::AreEqual(0x00, (int)RAM[0x3080]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_TRUE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(true);
 		}
 
 		TEST_METHOD(ASL_ZPG)
@@ -985,11 +1002,11 @@ namespace emu6502test
 			_write("18 06 20");
 			_write(0x0020, "55");
 			CPU->Run();
-			ASSERT_LAST("ASL", sZeroPage);
+			AssertLastInstruction("ASL", sZeroPage);
 			Assert::AreEqual(0xAA, (int)RAM[0x0020]);
-			ASSERT_CARRY_FALSE();
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(false);
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ASL_ZPGX)
@@ -997,22 +1014,22 @@ namespace emu6502test
 			_write("A2 30 18 16 30");
 			_write(0x0060, "C0");
 			CPU->Run();
-			ASSERT_LAST("ASL", sZeroPageX);
+			AssertLastInstruction("ASL", sZeroPageX);
 			Assert::AreEqual(0x80, (int)RAM[0x0060]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LSR_A)
 		{
 			_write("A9 87 4A");
 			CPU->Run();
-			ASSERT_LAST("LSR A");
+			AssertLastInstruction("LSR A");
 			Assert::AreEqual(0x43, (int)CPU->A);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LSR_ABS)
@@ -1020,11 +1037,11 @@ namespace emu6502test
 			_write("4E 00 20");
 			_write(0x2000, "55");
 			CPU->Run();
-			ASSERT_LAST("LSR", sAbsolute);
+			AssertLastInstruction("LSR", sAbsolute);
 			Assert::AreEqual(0x2A, (int)RAM[0x2000]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LSR_ABSX)
@@ -1032,11 +1049,11 @@ namespace emu6502test
 			_write("A2 30 5E 50 30");
 			_write(0x3080, "01");
 			CPU->Run();
-			ASSERT_LAST("LSR", sAbsoluteX);
+			AssertLastInstruction("LSR", sAbsoluteX);
 			Assert::AreEqual(0x00, (int)RAM[0x3080]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_TRUE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(true);
 		}
 
 		TEST_METHOD(LSR_ZPG)
@@ -1044,11 +1061,11 @@ namespace emu6502test
 			_write("46 20");
 			_write(0x0020, "FF");
 			CPU->Run();
-			ASSERT_LAST("LSR", sZeroPage);
+			AssertLastInstruction("LSR", sZeroPage);
 			Assert::AreEqual(0x7F, (int)RAM[0x0020]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(LSR_ZPGX)
@@ -1056,11 +1073,11 @@ namespace emu6502test
 			_write("A2 30 56 30");
 			_write(0x0060, "C0");
 			CPU->Run();
-			ASSERT_LAST("LSR", sZeroPageX);
+			AssertLastInstruction("LSR", sZeroPageX);
 			Assert::AreEqual(0x60, (int)RAM[0x0060]);
-			ASSERT_CARRY_FALSE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(false);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 	};
 
@@ -1080,11 +1097,11 @@ namespace emu6502test
 		{
 			_write("A9 87 18 2A");
 			CPU->Run();
-			ASSERT_LAST("ROL A");
+			AssertLastInstruction("ROL A");
 			Assert::AreEqual(0x0E, (int)CPU->A);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ROL_ABS)
@@ -1092,11 +1109,11 @@ namespace emu6502test
 			_write("38 2E 00 20");
 			_write(0x2000, "55");
 			CPU->Run();
-			ASSERT_LAST("ROL", sAbsolute);
+			AssertLastInstruction("ROL", sAbsolute);
 			Assert::AreEqual(0xAB, (int)RAM[0x2000]);
-			ASSERT_CARRY_FALSE();
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(false);
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ROL_ABSX)
@@ -1104,11 +1121,11 @@ namespace emu6502test
 			_write("A2 30 18 3E 50 30");
 			_write(0x3080, "80");
 			CPU->Run();
-			ASSERT_LAST("ROL", sAbsoluteX);
+			AssertLastInstruction("ROL", sAbsoluteX);
 			Assert::AreEqual(0x00, (int)RAM[0x3080]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_TRUE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(true);
 		}
 
 		TEST_METHOD(ROL_ZPG)
@@ -1116,11 +1133,11 @@ namespace emu6502test
 			_write("18 26 20");
 			_write(0x0020, "55");
 			CPU->Run();
-			ASSERT_LAST("ROL", sZeroPage);
+			AssertLastInstruction("ROL", sZeroPage);
 			Assert::AreEqual(0xAA, (int)RAM[0x0020]);
-			ASSERT_CARRY_FALSE();
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(false);
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ROL_ZPGX)
@@ -1128,22 +1145,22 @@ namespace emu6502test
 			_write("A2 30 18 36 30");
 			_write(0x0060, "C4");
 			CPU->Run();
-			ASSERT_LAST("ROL", sZeroPageX);
+			AssertLastInstruction("ROL", sZeroPageX);
 			Assert::AreEqual(0x88, (int)RAM[0x0060]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ROR_A)
 		{
 			_write("A9 87 18 6A");
 			CPU->Run();
-			ASSERT_LAST("ROR A");
+			AssertLastInstruction("ROR A");
 			Assert::AreEqual(0x43, (int)CPU->A);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ROR_ABS)
@@ -1151,11 +1168,11 @@ namespace emu6502test
 			_write("18 6E 00 20");
 			_write(0x2000, "55");
 			CPU->Run();
-			ASSERT_LAST("ROR", sAbsolute);
+			AssertLastInstruction("ROR", sAbsolute);
 			Assert::AreEqual(0x2A, (int)RAM[0x2000]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ROR_ABSX)
@@ -1163,11 +1180,11 @@ namespace emu6502test
 			_write("A2 30 38 7E 50 30");
 			_write(0x3080, "01");
 			CPU->Run();
-			ASSERT_LAST("ROR", sAbsoluteX);
+			AssertLastInstruction("ROR", sAbsoluteX);
 			Assert::AreEqual(0x80, (int)RAM[0x3080]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_TRUE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(true);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ROR_ZPG)
@@ -1175,11 +1192,11 @@ namespace emu6502test
 			_write("18 66 20");
 			_write(0x0020, "FF");
 			CPU->Run();
-			ASSERT_LAST("ROR", sZeroPage);
+			AssertLastInstruction("ROR", sZeroPage);
 			Assert::AreEqual(0x7F, (int)RAM[0x0020]);
-			ASSERT_CARRY_TRUE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(true);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 
 		TEST_METHOD(ROR_ZPGX)
@@ -1187,11 +1204,11 @@ namespace emu6502test
 			_write("A2 30 18 76 30");
 			_write(0x0060, "C0");
 			CPU->Run();
-			ASSERT_LAST("ROR", sZeroPageX);
+			AssertLastInstruction("ROR", sZeroPageX);
 			Assert::AreEqual(0x60, (int)RAM[0x0060]);
-			ASSERT_CARRY_FALSE();
-			ASSERT_NEGATIVE_FALSE();
-			ASSERT_ZERO_FALSE();
+			AssertCarry(false);
+			AssertNegative(false);
+			AssertZero(false);
 		}
 	};
 
@@ -1211,10 +1228,10 @@ namespace emu6502test
 		{
 			_write("A9 60 C9 61");
 			CPU->Run();
-			ASSERT_LAST("CMP", sImmediate);
-			ASSERT_CARRY_FALSE();
-			ASSERT_ZERO_FALSE();
-			ASSERT_NEGATIVE_TRUE();
+			AssertLastInstruction("CMP", sImmediate);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(true);
 		}
 
 		TEST_METHOD(CMP_ABS)
@@ -1222,10 +1239,10 @@ namespace emu6502test
 			_write("A9 10 CD 00 30");
 			_write(0x3000, "F0");
 			CPU->Run();
-			ASSERT_LAST("CMP", sAbsolute);
-			ASSERT_CARRY_FALSE();
-			ASSERT_ZERO_FALSE();
-			ASSERT_NEGATIVE_FALSE();
+			AssertLastInstruction("CMP", sAbsolute);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(false);
 		}
 
 		TEST_METHOD(CMP_ABSX)
@@ -1233,10 +1250,10 @@ namespace emu6502test
 			_write("A9 F0 A2 10 DD 00 30");
 			_write(0x3010, "F0");
 			CPU->Run();
-			ASSERT_LAST("CMP", sAbsoluteX);
-			ASSERT_CARRY_TRUE();
-			ASSERT_ZERO_TRUE();
-			ASSERT_NEGATIVE_FALSE();
+			AssertLastInstruction("CMP", sAbsoluteX);
+			AssertCarry(true);
+			AssertZero(true);
+			AssertNegative(false);
 		}
 
 		TEST_METHOD(CMP_ABSY)
@@ -1244,10 +1261,10 @@ namespace emu6502test
 			_write("A9 AA A0 20 D9 00 40");
 			_write(0x4020, "55");
 			CPU->Run();
-			ASSERT_LAST("CMP", sAbsoluteY);
-			ASSERT_CARRY_TRUE();
-			ASSERT_ZERO_FALSE();
-			ASSERT_NEGATIVE_FALSE();
+			AssertLastInstruction("CMP", sAbsoluteY);
+			AssertCarry(true);
+			AssertZero(false);
+			AssertNegative(false);
 		}
 
 		TEST_METHOD(CMP_ZPG)
@@ -1255,10 +1272,10 @@ namespace emu6502test
 			_write("A9 10 C5 30");
 			_write(0x0030, "F0");
 			CPU->Run();
-			ASSERT_LAST("CMP", sZeroPage);
-			ASSERT_CARRY_FALSE();
-			ASSERT_ZERO_FALSE();
-			ASSERT_NEGATIVE_FALSE();
+			AssertLastInstruction("CMP", sZeroPage);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(false);
 		}
 
 		TEST_METHOD(CMP_ZPGX)
@@ -1266,10 +1283,34 @@ namespace emu6502test
 			_write("A9 F0 A2 10 D5 30");
 			_write(0x0040, "F0");
 			CPU->Run();
-			ASSERT_LAST("CMP", sZeroPageX);
-			ASSERT_CARRY_TRUE();
-			ASSERT_ZERO_TRUE();
-			ASSERT_NEGATIVE_FALSE();
+			AssertLastInstruction("CMP", sZeroPageX);
+			AssertCarry(true);
+			AssertZero(true);
+			AssertNegative(false);
+		}
+
+		TEST_METHOD(CMP_XIND)
+		{
+			_write("A9 40 A2 50 C1 40");
+			_write(0x0090, "00 30");
+			_write(0x3000, "80");
+			CPU->Run();
+			AssertLastInstruction("CMP", sXIndirect);
+			AssertCarry(false);
+			AssertZero(false);
+			AssertNegative(true);
+		}
+
+		TEST_METHOD(CMP_INDY)
+		{
+			_write("A9 80 A0 20 D1 30");
+			_write(0x0030, "00 30");
+			_write(0x3020, "40");
+			CPU->Run();
+			AssertLastInstruction("CMP", sIndirectY);
+			AssertCarry(true);
+			AssertZero(false);
+			AssertNegative(false);
 		}
 	};
 }
