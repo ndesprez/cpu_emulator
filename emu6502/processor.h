@@ -1,7 +1,40 @@
 #pragma once
 
+#include <string.h>
+
 using byte = unsigned char;
 using word = unsigned short;
+
+// TODO: add a namespace ?
+
+// equivalent to addressing modes plus extra for transfer instructions
+enum SourceType {
+	sAccumulator,
+	sIndexX,
+	sIndexY,
+	sStackPointer,
+	sAbsolute,
+	sAbsoluteX,
+	sAbsoluteY,
+	sImmediate,
+	sImplied,
+	sIndirect,
+	sXIndirect,
+	sIndirectY,
+	sZeroPage,
+	sZeroPageX,
+	sZeroPageY
+};
+
+enum TargetType {
+	tNone,
+	tAccumulator,
+	tIndexX,
+	tIndexY,
+	tStackPointer,
+	tStatus,
+	tAddress
+};
 
 class Processor
 {
@@ -9,6 +42,8 @@ protected:
 	const word NonMaskableInterruptVector	= 0xFFFA;
 	const word ResetVector					= 0xFFFC;
 	const word InterruptVector				= 0xFFFE;
+
+	const byte BreakOpCode = 0x00;
 
 	enum Flags : byte {
 		fCarry		=   1,
@@ -19,35 +54,6 @@ protected:
 		// status bit 5 is always set to 1
 		fOverflow	=  64,
 		fNegative	= 128
-	};
-
-	// equivalent to addressing modes plus extra for transfer instructions
-	enum SourceType {
-		sAccumulator,
-		sIndexX,
-		sIndexY,
-		sStackPointer,
-		sAbsolute,
-		sAbsoluteX,
-		sAbsoluteY,
-		sImmediate,
-		sImplied,
-		sIndirect,
-		sXIndirect,
-		sIndirectY,
-		sZeroPage,
-		sZeroPageX,
-		sZeroPageY
-	};
-
-	enum TargetType {
-		tNone,
-		tAccumulator,
-		tIndexX,
-		tIndexY,
-		tStackPointer,
-		tStatus,
-		tAddress
 	};
 
 	struct Instruction {
@@ -191,6 +197,7 @@ protected:
 		{0x38, "SEC", sImplied, tNone, &Processor::SetCarryFlag},
 		{0xF8, "SED", sImplied, tNone, &Processor::SetDecimalFlag},
 		{0x78, "SEI", sImplied, tNone, &Processor::SetInterruptFlag},
+		// note: source and target are swapped for store instructions
 		{0x81, "STA", sXIndirect, tAccumulator, &Processor::Store},
 		{0x85, "STA", sZeroPage, tAccumulator, &Processor::Store},
 		{0x8D, "STA", sAbsolute, tAccumulator, &Processor::Store},
@@ -213,6 +220,7 @@ protected:
 	};
 
 	const Instruction*	InstructionSet[256] = {};
+	const Instruction* LastInstruction;
 
 	byte	*Memory;		// 64kb of RAM (hopefully)
 	byte	*Source;		// instruction source
@@ -321,7 +329,7 @@ protected:
 	{
 		WriteFlag(fCarry, (*Target >= *Source));
 		WriteFlag(fZero, (*Target == *Source));
-		// TODO : code a better byte subtraction
+		// TODO : code a better byte subtraction if necessary
 		WriteFlag(fNegative, SignBit(*Target - *Source));
 	}
 
@@ -595,8 +603,12 @@ protected:
 	void ExecuteInstruction()
 	{
 		ReadOpCode();
+
 		// TODO : handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
-		const Instruction* in = InstructionSet[OpCode];
+		const Instruction *in = InstructionSet[OpCode];
+
+		if (OpCode != BreakOpCode)
+			LastInstruction = in;
 
 		switch (in->Source)
 		{
@@ -690,7 +702,6 @@ protected:
 			// unknown target ?
 			break;
 		}
-
 		(this->*in->Function)();
 	}
 			
@@ -804,6 +815,21 @@ public:
 		do
 		{
 			Step();
-		} while ((OpCode != 0x00) || !EndOnBreak);
+		} while ((OpCode != BreakOpCode) || !EndOnBreak);
+	}
+
+	bool IsLastInstruction(const char *Name)
+	{
+		return (strcmp(LastInstruction->Name, Name) == 0);
+	}
+
+	bool IsLastInstruction(const char *Name, SourceType Source)
+	{
+		return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source));
+	}
+
+	bool IsLastInstruction(const char *Name, SourceType Source, TargetType Target)
+	{
+		return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
 	}
 };
