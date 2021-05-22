@@ -9,26 +9,28 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace emu6502test
 {
-	const wchar_t MessageNegativeFalse[] = L"Negative flag is false.";
-	const wchar_t MessageNegativeTrue[] = L"Negative flag is true.";
-	const wchar_t MessageZeroFalse[] = L"Zero flag is false.";
-	const wchar_t MessageZeroTrue[] = L"Zero flag is true.";
 	const wchar_t MessageCarryFalse[] = L"Carry flag is false.";
 	const wchar_t MessageCarryTrue[] = L"Carry flag is true.";
+	const wchar_t MessageZeroFalse[] = L"Zero flag is false.";
+	const wchar_t MessageZeroTrue[] = L"Zero flag is true.";
+	const wchar_t MessageOverflowFalse[] = L"Overflow flag is false.";
+	const wchar_t MessageOverflowTrue[] = L"Overflow flag is true.";
+	const wchar_t MessageNegativeFalse[] = L"Negative flag is false.";
+	const wchar_t MessageNegativeTrue[] = L"Negative flag is true.";
 	const wchar_t MessageMismatch[] = L"Instruction mismatch";
 
 	Processor	*CPU;
 	byte		*RAM;
 	word		WriteCounter;
 
-	void AssertNegative(bool Value)		
-	{ 
+	void AssertCarry(bool Value)
+	{
 		if(Value)
-			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse); 
+			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
 		else
-			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
-	}
-
+			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+	}	
+	
 	void AssertZero(bool Value)
 	{
 		if (Value)
@@ -37,12 +39,20 @@ namespace emu6502test
 			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
 	}
 
-	void AssertCarry(bool Value)
+	void AssertOverflow(bool Value)
 	{
-		if(Value)
-			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
+		if (Value)
+			Assert::IsTrue(CPU->FlagOverflow(), MessageOverflowFalse);
 		else
-			Assert::IsFalse(CPU->FlagCarry(), MessageCarryTrue);
+			Assert::IsFalse(CPU->FlagOverflow(), MessageOverflowTrue);
+	}
+
+	void AssertNegative(bool Value)
+	{ 
+		if(Value)
+			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse); 
+		else
+			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
 	}
 
 	// AssertLastInstruction: making sure the last instruction we ran is the one we're testing
@@ -1529,6 +1539,124 @@ namespace emu6502test
 			Assert::AreEqual(0xFF, (int)CPU->Y);
 			AssertZero(false);
 			AssertNegative(true);
+		}
+	};
+
+	TEST_CLASS(Add)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(ADC_IMM)
+		{
+			_write("A9 01 18 69 01");
+			CPU->Run();
+			AssertLastInstruction("ADC", sImmediate);
+			Assert::AreEqual(0x02, (int)CPU->A);
+			AssertCarry(false);
+			AssertNegative(false);
+			AssertZero(false);
+			AssertOverflow(false);
+		}
+
+		TEST_METHOD(ADC_ABS)
+		{
+			_write("A9 FF 38 6D 00 20");
+			_write(0x2000, "FF");
+			CPU->Run();
+			AssertLastInstruction("ADC", sAbsolute);
+			Assert::AreEqual(0xFF, (int)CPU->A);
+			AssertCarry(true);
+			AssertNegative(true);
+			AssertZero(false);
+			AssertOverflow(false);
+		}
+
+		TEST_METHOD(ADC_ABSX)
+		{
+			_write("A9 80 A2 10 18 7D 00 20");
+			_write(0x2010, "80");
+			CPU->Run();
+			AssertLastInstruction("ADC", sAbsoluteX);
+			Assert::AreEqual(0x00, (int)CPU->A);
+			AssertNegative(false);
+			AssertZero(true);
+			AssertCarry(true);
+			AssertOverflow(true);
+		}
+
+		TEST_METHOD(ADC_ABSY)
+		{
+			_write("A9 0A A0 20 18 79 00 20");
+			_write(0x2020, "F6");
+			CPU->Run();
+			AssertLastInstruction("ADC", sAbsoluteY);
+			Assert::AreEqual(0x00, (int)CPU->A);
+			AssertNegative(false);
+			AssertZero(true);
+			AssertCarry(true);
+			AssertOverflow(false);
+		}
+
+		TEST_METHOD(ADC_ZPG)
+		{
+			_write("A9 20 18 65 48");
+			_write(0x0048, "40");
+			CPU->Run();
+			AssertLastInstruction("ADC", sZeroPage);
+			Assert::AreEqual(0x60, (int)CPU->A);
+			AssertNegative(false);
+			AssertZero(false);
+			AssertCarry(false);
+			AssertOverflow(false);
+		}
+
+		TEST_METHOD(ADC_ZPGX)
+		{
+			_write("A9 F6 A2 10 18 75 58");
+			_write(0x0068, "F6");
+			CPU->Run();
+			AssertLastInstruction("ADC", sZeroPageX);
+			Assert::AreEqual(0xEC, (int)CPU->A);
+			AssertNegative(true);
+			AssertZero(false);
+			AssertCarry(true);
+			AssertOverflow(false);
+		}
+
+		TEST_METHOD(ADC_XIND)
+		{
+			_write("A9 0F A2 30 38 61 70");
+			_write(0x00A0, "10 20");
+			_write(0x2010, "0F");
+			CPU->Run();
+			AssertLastInstruction("ADC", sXIndirect);
+			Assert::AreEqual(0x1F, (int)CPU->A);
+			AssertNegative(false);
+			AssertZero(false);
+			AssertCarry(false);
+			AssertOverflow(false);
+		}
+
+		TEST_METHOD(ADC_INDY)
+		{
+			_write("A9 7F A0 18 38 71 35");
+			_write(0x0035, "10 20");
+			_write(0x2028, "7F");
+			CPU->Run();
+			AssertLastInstruction("ADC", sIndirectY);
+			Assert::AreEqual(0xFF, (int)CPU->A);
+			AssertNegative(true);
+			AssertZero(false);
+			AssertCarry(false);
+			AssertOverflow(true);
 		}
 	};
 }
