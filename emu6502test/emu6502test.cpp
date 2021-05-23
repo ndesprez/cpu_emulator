@@ -2188,5 +2188,28 @@ namespace emu6502test
 			Assert::AreEqual(0x1004, CPU->PC - 1);
 			AssertFlagsUnchanged();
 		}
+
+		TEST_METHOD(BRK)
+		{
+			_write("00");
+			_write(0xFFFE, "00 80");
+			CPU->EndOnBreak = false;
+			CPU->Step(2);
+			AssertLastInstruction("BRK");
+			Assert::AreEqual(0x8000, (int)CPU->PC);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(RTI)
+		{
+			_write("00 EA");
+			_write(0xFFFE, "00 80");
+			_write(0x8000, "EA 40");
+			CPU->EndOnBreak = false;
+			CPU->Step(4);
+			AssertLastInstruction("RTI");
+			Assert::AreEqual(0x1003, (int)CPU->PC);
+			AssertFlagsUnchanged();
+		}
 	};
 }

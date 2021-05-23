@@ -629,7 +629,7 @@ protected:
 		// TODO: handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
 		const Instruction *in = InstructionSet[OpCode];
 
-		if (OpCode != BreakOpCode)
+		if ((OpCode != BreakOpCode) || (!EndOnBreak))
 			LastInstruction = in;
 
 		switch (in->Source)
