@@ -253,487 +253,70 @@ protected:
 	bool NonMaskableInterruptState;	// true if SendNMI() was called
 	
 #pragma region internal functions
-	bool SignBit(byte Value)
-	{
-		return Value & 0x80;
-	}
-
-	word Add(word A, byte B)
-	{
-		return ((int)A + B) & 0xFFFF;
-	}
-
-	byte Add(byte A, byte B)
-	{
-		return ((word)A + B) & 0xFF;
-	}
-
-	byte ReadData(word Address)
-	{
-		Data = Memory[Address];
-
-		return Data;
-	}
-
-	void WriteData(word Address) 
-	{
-		Memory[Address] = Data;
-	}
-
-	byte ReadOpCode()
-	{
-		OpCode = Memory[PC++];
-
-		return OpCode;
-	}
-
-	void ReadDataAtPC()
-	{
-		ReadData(PC++);
-	}
-
-	word ReadAddress(word Address)
-	{
-		this->Address = Memory[Address] | (Memory[Add(Address, 1)] << 8);
-
-		return this->Address;
-	}
-
-	void WriteAddress(word Address)
-	{
-		Memory[Address] = this->Address & 0xFF;
-		Memory[Add(Address, 1)] = this->Address >> 8;
-	}
-
-	void ReadAddressAtPC()
-	{
-		ReadAddress(PC);
-		PC += 2;
-	}
-
-	bool ReadFlag(Flags Flag)
-	{
-		return P & Flag;
-	}
-
-	void WriteFlag(Flags Flag, bool Value)
-	{
-		if(Value)
-			P |= Flag;
-		else
-			P &= ~Flag;
-	}
-
-	void WriteTargetFlags()
-	{
-		WriteFlag(fZero, (*Target == 0));
-		WriteFlag(fNegative, SignBit(*Target));
-	}
-
+	bool SignBit(byte Value);
+	word Add(word A, byte B);
+	byte Add(byte A, byte B);
+	byte ReadData(word Address);
+	void WriteData(word Address);
+	byte ReadOpCode();
+	void ReadDataAtPC();
+	word ReadAddress(word Address);
+	void WriteAddress(word Address);
+	void ReadAddressAtPC();
+	bool ReadFlag(Flags Flag);
+	void WriteFlag(Flags Flag, bool Value);
+	void WriteTargetFlags();
 #pragma endregion
 
 #pragma region instructions
-	void Load()
-	{
-		*Target = *Source;		
-		WriteTargetFlags();
-	}
+	void Load();
+	void Store();
+	void Compare();
+	void And();
+	void Xor();
+	void Or();
+	void RotateLeft();
+	void RotateRight();
+	void ShiftLeft();
+	void ShiftRight();
+	void Increment();
+	void Decrement();
+	void AddWithCarry();
+	void SubtractWithCarry();
+	void Push();
+	void PushAddress(word Address);
+	void PullAddress(word &Address);
+	void Pull();
+	void Branch();
+	void Jump();
+	void Call();
+	void Return();
+	void Break();
+	void Nop();
+	void BranchIfMinus();
+	void BranchIfPositive();
+	void BranchIfEqual();
+	void BranchIfNotEqual();
+	void BranchIfCarrySet();
+	void BranchIfCarryClear();
+	void BranchIfOverflowSet();
+	void BranchIfOverflowClear();
+	void ClearCarryFlag();
+	void ClearDecimalFlag();
+	void ClearInterruptFlag();
+	void ClearOverflowFlag();
+	void SetCarryFlag();
+	void SetDecimalFlag();
+	void SetInterruptFlag();
+	void BitTest();
 
-	void Store()
-	{
-		*Source = *Target;
-	}
-
-	void Compare()
-	{
-		WriteFlag(fCarry, (*Target >= *Source));
-		WriteFlag(fZero, (*Target == *Source));
-		// TODO: code a better byte subtraction if necessary
-		WriteFlag(fNegative, SignBit(*Target - *Source));
-	}
-
-	void And()
-	{
-		*Target &= *Source;
-		WriteTargetFlags();
-	}
-
-	void Xor()
-	{
-		*Target ^= *Source;
-		WriteTargetFlags();
-	}
-
-	void Or()
-	{
-		*Target |= *Source;
-		WriteTargetFlags();
-	}
-
-	void RotateLeft()
-	{
-		byte c = ReadFlag(fCarry);
-		WriteFlag(fCarry, SignBit(*Target));
-		*Target = ((*Target) << 1) | c;
-		WriteTargetFlags();
-	}
-
-	void RotateRight()
-	{
-		byte c = ReadFlag(fCarry);
-		WriteFlag(fCarry, (*Target) & 1);
-		*Target = ((*Target) >> 1) | (c << 7);
-		WriteTargetFlags();
-	}
-
-	void ShiftLeft()
-	{
-		WriteFlag(fCarry, SignBit(*Target));
-		*Target <<= 1;
-		WriteTargetFlags();
-	}
-
-	void ShiftRight()
-	{
-		WriteFlag(fCarry, (*Target) & 1);
-		*Target >>= 1;
-		WriteTargetFlags();
-	}
-
-	void Increment()
-	{
-		(*Target)++;
-		WriteTargetFlags();
-	}
-
-	void Decrement()
-	{
-		(*Target)--;
-		WriteTargetFlags();
-	}
-
-	void AddWithCarry()
-	{
-		// TODO: implement BCD addition
-		word result = *Target + *Source + ReadFlag(fCarry);
-
-		// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
-		WriteFlag(fOverflow, (*Source ^ result) & (*Target ^ result) & 0x80);
-		*Target = result & 0xFF;
-		WriteFlag(fCarry, result & 0x100);
-		WriteTargetFlags();
-	}
-
-	void SubtractWithCarry()
-	{
-		// TODO: implement BCD subtraction
-		word result = *Target + ~*Source + ReadFlag(fCarry);
-
-		WriteFlag(fOverflow, (~*Source ^ result) & (*Target ^ result) & 0x80);
-		*Target = result & 0xFF;
-		WriteFlag(fCarry, result & 0x100);
-		WriteTargetFlags();
-	}
-
-	// TODO: write a generic internal byte push
-	void Push()
-	{
-		Memory[Add((word)0x100, S--)] = *Target;
-	}
-
-	void PushAddress(word Address)
-	{
-		Memory[Add((word)0x100, S--)] = Address >> 8;
-		Memory[Add((word)0x100, S--)] = Address & 0xFF;
-	}
-
-	void PullAddress(word &Address)
-	{
-		Address = Memory[Add((word)0x100, ++S)] | (Memory[Add((word)0x100, ++S)] << 8);
-	}
-
-	// TODO: write a generic internal byte pull
-	void Pull()
-	{
-		*Target = Memory[Add((word)0x100, ++S)];
-	}
-
-	void Branch()
-	{
-		PC += (char)*Source;
-	}
-
-	void Jump()
-	{
-		// this avoids PC = &Memory[Address] in absolute and indirect modes
-		PC = Address;
-	}
-
-	void Call()
-	{
-		PushAddress(PC - 1);
-		Jump();
-	}
-
-	void Return()
-	{
-		PullAddress(PC);
-		PC++;
-	}
-
-	void Break()
-	{
-		if (!EndOnBreak)
-		{
-			PushAddress(PC);
-			Memory[Add((word)0x100, S--)] = P | fBreak;
-			PC = ReadAddress(InterruptVector);
-		}
-	}
-
-	void Nop()
-	{
-		// nope nope nope nope...
-	}
-
-	void BranchIfMinus()
-	{
-		if (ReadFlag(fNegative))
-			Branch();
-	}
-
-	void BranchIfPositive()
-	{
-		if (!ReadFlag(fNegative))
-			Branch();
-	}
-
-	void BranchIfEqual() 
-	{
-		if (ReadFlag(fZero))
-			Branch();
-	}
-
-	void BranchIfNotEqual() 
-	{
-		if (!ReadFlag(fZero))
-			Branch();
-	}
-
-	void BranchIfCarrySet() 
-	{
-		if (ReadFlag(fCarry))
-			Branch();
-	}
-
-	void BranchIfCarryClear()
-	{
-		if (!ReadFlag(fCarry))
-			Branch();
-	}
-
-	void BranchIfOverflowSet() 
-	{
-		if (ReadFlag(fOverflow))
-			Branch();
-	}
-
-	void BranchIfOverflowClear()
-	{
-		if (!ReadFlag(fOverflow))
-			Branch();
-	}
-
-	void ClearCarryFlag()
-	{
-		WriteFlag(fCarry, false);
-	}
-	
-	void ClearDecimalFlag()
-	{
-		WriteFlag(fDecimal, false);
-	}
-
-	void ClearInterruptFlag() 
-	{
-		WriteFlag(fInterrupt, false);
-	}
-
-	void ClearOverflowFlag()
-	{
-		WriteFlag(fOverflow, false);
-	}
-
-	void SetCarryFlag()
-	{
-		WriteFlag(fCarry, true);
-	}
-
-	void SetDecimalFlag()
-	{
-		WriteFlag(fDecimal, true);
-	}
-
-	void SetInterruptFlag()
-	{
-		WriteFlag(fInterrupt, true);
-	}
-
-	void BitTest()
-	{
-		WriteFlag(fZero, (A & *Target) == 0);
-		WriteFlag(fOverflow, *Target & 0x40);
-		WriteFlag(fNegative, *Target & 0x80);
-	}
-
-	void Reset()
-	{
-		S = 0xFD;
-		P = 0b00110000;
-		PC = ReadAddress(ResetVector);
-		ResetState = false;
-		InterruptState = false;
-		NonMaskableInterruptState = false;
-	}
-
-	void Interrupt()
-	{
-		InterruptState = false;
-		PushAddress(PC);
-		Memory[Add((word)0x100, S--)] = P & ~fBreak;
-		WriteFlag(fInterrupt, true);
-		PC = ReadAddress(InterruptVector);
-	}
-
-	void NonMaskableInterrupt()
-	{
-		NonMaskableInterruptState = false;
-		PushAddress(PC);
-		Memory[Add((word)0x100, S--)] = P;
-		WriteFlag(fInterrupt, true);
-		PC = ReadAddress(NonMaskableInterruptVector);
-	}
-
-	void ReturnFromInterrupt()
-	{
-		P = Memory[Add((word)0x100, ++S)];
-		Return();
-	}
-
+	void Reset();
+	void Interrupt();
+	void NonMaskableInterrupt();
+	void ReturnFromInterrupt();
 #pragma endregion
 
-	void ExecuteInstruction()
-	{
-		ReadOpCode();
-
-		// TODO: handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
-		const Instruction *in = InstructionSet[OpCode];
-
-		if ((OpCode != BreakOpCode) || (!EndOnBreak))
-			LastInstruction = in;
-
-		switch (in->Source)
-		{
-		case sImplied:
-			Source = nullptr;
-			break;
-		case sAccumulator:
-			Source = &A;
-			break;
-		case sIndexX:
-			Source = &X;
-			break;
-		case sIndexY:
-			Source = &Y;
-			break;
-		case sStackPointer:
-			Source = &S;
-			break;
-		case sAbsolute:
-			ReadAddressAtPC();
-			Source = &Memory[Address];
-			break;
-		case sAbsoluteX:
-			ReadAddressAtPC();
-			Source = &Memory[Add(Address, X)];
-			break;
-		case sAbsoluteY:
-			ReadAddressAtPC();
-			Source = &Memory[Add(Address, Y)];
-			break;
-		case sImmediate:
-			ReadDataAtPC();
-			Source = &Data;
-			break;
-		case sIndirect:
-			ReadAddressAtPC();
-
-			// JMP ($xxFF) bug (luckily the only instruction to use indirect mode)
-			if ((Address & 0xFF) == 0xFF)
-				Address = Memory[Address] | (Memory[Address & 0xFF00] << 8);
-			else
-				ReadAddress(Address);
-
-			Source = &Memory[Address];
-			break;
-		case sXIndirect:
-			ReadDataAtPC();
-			ReadAddress(Add(Data, X));
-			Source = &Memory[Address];
-			break;
-		case sIndirectY:
-			ReadDataAtPC();
-			ReadAddress(Data);
-			Source = &Memory[Add(Address, Y)];
-			break;
-		case sZeroPage:
-			ReadDataAtPC();
-			Source = &Memory[Data];
-			break;
-		case sZeroPageX:
-			ReadDataAtPC();
-			Source = &Memory[Add(Data, X)];
-			break;
-		case sZeroPageY:
-			ReadDataAtPC();
-			Source = &Memory[Add(Data, Y)];
-			break;
-		default:
-			// unknown addressing mode ?
-			break;
-		}
-
-		// TODO: this can be set in the LegalInstructionSet array initialisation
-		switch (in->Target)
-		{
-		case tNone:
-			Target = nullptr;
-			break;
-		case tAccumulator:
-			Target = &A;
-			break;
-		case tIndexX:
-			Target = &X;
-			break;
-		case tIndexY:
-			Target = &Y;
-			break;
-		case tStackPointer:
-			Target = &S;
-			break;
-		case tStatus:
-			Target = &P;
-			break;
-		case tAddress:
-			Target = Source;
-			break;
-		default:
-			// unknown target ?
-			break;
-		}
-
-		(this->*in->Function)();
-	}
+	void ExecuteInstruction();
 			
 public:
 	byte	A;		// accumulator
@@ -743,123 +326,20 @@ public:
 	byte	P;		// status flags
 	bool	EndOnBreak;
 
-	Processor(byte *Array)
-	{
-		Memory = Array;
-		Source = nullptr;
-		Target = nullptr;
-		Data = 0;
-		Address = 0;
-		OpCode = 0;
-
-		A = 0;
-		X = 0;
-		Y = 0;
-		S = 0;
-		P = 0;
-		PC = 0;
-
-		EndOnBreak = false;
-
-		ResetState = false;
-		InterruptState = false;
-		NonMaskableInterruptState = false;
-		
-		// leaves room for undocumented/illegal instructions
-		for (int i = 0; i < 151; i++)
-		{
-			InstructionSet[LegalInstructionSet[i].OpCode] = &LegalInstructionSet[i];
-		}
-	}
-
-	bool FlagCarry()
-	{
-		return ReadFlag(fCarry);
-	}
-
-	bool FlagZero()
-	{
-		return ReadFlag(fZero);
-	}
-
-	bool FlagInterrupt()
-	{
-		return ReadFlag(fInterrupt);
-	}
-
-	bool FlagDecimal()
-	{
-		return ReadFlag(fDecimal);
-	}
-
-	bool FlagOverflow()
-	{
-		return ReadFlag(fOverflow);
-	}
-
-	bool FlagNegative()
-	{
-		return ReadFlag(fNegative);
-	}
-
-	void SendRST()
-	{
-		ResetState = true;
-	}
-
-	void SendIRQ()
-	{
-		if(!ReadFlag(fInterrupt))
-			InterruptState = true;
-	}
-
-	void SendNMI()
-	{
-		NonMaskableInterruptState = true;
-	}
-
-	void Step()
-	{
-		if (ResetState)
-		{
-			Reset();
-			return;
-		}
-
-		ExecuteInstruction();
-
-		if (NonMaskableInterruptState)
-			NonMaskableInterrupt();
-		else if (InterruptState)
-			Interrupt();
-	}
-
-	void Step(int Count)
-	{
-		for (int i = 0; i < Count; i++)
-			Step();
-	}
-
-	void Run()
-	{
-		do
-		{
-			Step();
-		} while ((OpCode != BreakOpCode) || !EndOnBreak);
-	}
-
-	bool IsLastInstruction(const char *Name)
-	{
-		return (strcmp(LastInstruction->Name, Name) == 0);
-	}
-
-	bool IsLastInstruction(const char *Name, SourceType Source)
-	{
-		return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source));
-	}
-
-	bool IsLastInstruction(const char *Name, SourceType Source, TargetType Target)
-	{
-		return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
-	}
+	Processor(byte *Array);
+	bool FlagCarry();
+	bool FlagZero();
+	bool FlagInterrupt();
+	bool FlagDecimal();
+	bool FlagOverflow();
+	bool FlagNegative();
+	void SendRST();
+	void SendIRQ();
+	void SendNMI();
+	void Step();
+	void Step(int Count);
+	void Run();
+	bool IsLastInstruction(const char *Name);
+	bool IsLastInstruction(const char *Name, SourceType Source);
+	bool IsLastInstruction(const char *Name, SourceType Source, TargetType Target);
 };

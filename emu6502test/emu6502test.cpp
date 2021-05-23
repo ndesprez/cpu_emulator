@@ -18,7 +18,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "..\emu6502\processor.h"
+#include "processor.h"
 
 #include <assert.h>
 #include <ctype.h>
