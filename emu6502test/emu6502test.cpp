@@ -27,22 +27,36 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace emu6502test
 {
+	// TODO: need to think harder about the pattern we're seeing here (maybe create a class?)
 	const wchar_t MessageCarryFalse[] = L"Carry flag is false.";
 	const wchar_t MessageCarryTrue[] = L"Carry flag is true.";
+	
 	const wchar_t MessageZeroFalse[] = L"Zero flag is false.";
 	const wchar_t MessageZeroTrue[] = L"Zero flag is true.";
+	
+	const wchar_t MessageInterruptFalse[] = L"Interrupt flag is false.";
+	const wchar_t MessageInterruptTrue[] = L"Interrupt flag is true.";
+	
+	const wchar_t MessageDecimalFalse[] = L"Decimal flag is false.";
+	const wchar_t MessageDecimalTrue[] = L"Decimal flag is true.";
+	
 	const wchar_t MessageOverflowFalse[] = L"Overflow flag is false.";
 	const wchar_t MessageOverflowTrue[] = L"Overflow flag is true.";
+	
 	const wchar_t MessageNegativeFalse[] = L"Negative flag is false.";
 	const wchar_t MessageNegativeTrue[] = L"Negative flag is true.";
+	
 	const wchar_t MessageMismatch[] = L"Instruction mismatch";
 
 	Processor	*CPU;
 	byte		*RAM;
 	word		WriteCounter;
+	byte		InitialStatus;		// initial value of CPU->P
+	byte		UnchangedFlagsMask; // when a bit is set, corresponding flag shouldn't change after the instruction is executed
 
 	void AssertCarry(bool Value)
 	{
+		UnchangedFlagsMask &= !fCarry;
 		if(Value)
 			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
 		else
@@ -51,14 +65,34 @@ namespace emu6502test
 	
 	void AssertZero(bool Value)
 	{
+		UnchangedFlagsMask &= !fZero;
 		if (Value)
 			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
 		else
 			Assert::IsFalse(CPU->FlagZero(), MessageZeroTrue);
 	}
 
+	void AssertInterrupt(bool Value)
+	{
+		UnchangedFlagsMask &= !fInterrupt;
+		if (Value)
+			Assert::IsTrue(CPU->FlagInterrupt(), MessageInterruptFalse);
+		else
+			Assert::IsFalse(CPU->FlagInterrupt(), MessageInterruptTrue);
+	}
+
+	void AssertDecimal(bool Value)
+	{
+		UnchangedFlagsMask &= !fDecimal;
+		if (Value)
+			Assert::IsTrue(CPU->FlagDecimal(), MessageDecimalFalse);
+		else
+			Assert::IsFalse(CPU->FlagDecimal(), MessageDecimalTrue);
+	}
+
 	void AssertOverflow(bool Value)
 	{
+		UnchangedFlagsMask &= !fOverflow;
 		if (Value)
 			Assert::IsTrue(CPU->FlagOverflow(), MessageOverflowFalse);
 		else
@@ -67,6 +101,7 @@ namespace emu6502test
 
 	void AssertNegative(bool Value)
 	{ 
+		UnchangedFlagsMask &= !fNegative;
 		if(Value)
 			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse); 
 		else
@@ -87,25 +122,6 @@ namespace emu6502test
 	void AssertLastInstruction(const char *Name, SourceType Source, TargetType Target)
 	{
 		Assert::IsTrue(CPU->IsLastInstruction(Name, Source, Target), MessageMismatch);
-	}
-
-	void _method_initialize()
-	{
-		RAM = new byte[0x10000];
-		RAM[0xFFFC] = 0x00;
-		RAM[0xFFFD] = 0x10;
-
-		CPU = new Processor(RAM);
-		CPU->EndOnBreak = true;
-		CPU->SendRST();
-		CPU->Step();
-		WriteCounter = CPU->PC;
-	}
-
-	void _method_cleanup()
-	{
-		delete CPU;
-		delete[] RAM;
 	}
 
 	void _write(char const *Data, bool AddBreak = true)
@@ -153,6 +169,33 @@ namespace emu6502test
 	{
 		WriteCounter = Address;
 		_write(Data, AddBreak);
+	}	
+	
+	void _method_initialize()
+	{
+		RAM = new byte[0x10000];
+		RAM[0xFFFC] = 0x00;
+		RAM[0xFFFD] = 0x10;
+
+		CPU = new Processor(RAM);
+		CPU->EndOnBreak = true;
+		CPU->SendRST();
+		CPU->Step();
+		WriteCounter = CPU->PC;
+		UnchangedFlagsMask = 0xFF;
+		InitialStatus = CPU->P;
+
+		// always start the test with PHP so we can pull (i.e. reset) the 
+		// status register just before we execute the instruction we're testing
+		_write("08");
+	}
+
+	void _method_cleanup()
+	{
+		Assert::IsFalse((InitialStatus ^ CPU->P) & UnchangedFlagsMask, L"A status flag has changed unexpectedly.");
+
+		delete CPU;
+		delete[] RAM;
 	}
 
 	TEST_CLASS(Load)
@@ -191,7 +234,7 @@ namespace emu6502test
 
 		TEST_METHOD(LDA_ABSX)
 		{
-			_write("A2 20 BD 00 20");
+			_write("A2 20 28 BD 00 20");
 			_write(0x2020, "DB");
 			CPU->Run();
 			AssertLastInstruction("LDA", sAbsoluteX);
@@ -202,7 +245,7 @@ namespace emu6502test
 
 		TEST_METHOD(LDA_ABSY)
 		{
-			_write("A0 30 B9 00 20");
+			_write("A0 30 28 B9 00 20");
 			_write(0x2030, "DC");
 			CPU->Run();
 			AssertLastInstruction("LDA", sAbsoluteY);
@@ -224,7 +267,7 @@ namespace emu6502test
 
 		TEST_METHOD(LDA_ZPGX)
 		{
-			_write("A2 10 B5 40");
+			_write("A2 10 28 B5 40");
 			_write(0x0050, "DE");
 			CPU->Run();
 			AssertLastInstruction("LDA", sZeroPageX);
@@ -235,7 +278,7 @@ namespace emu6502test
 
 		TEST_METHOD(LDA_XIND)
 		{
-			_write("A2 20 A1 20");
+			_write("A2 20 28 A1 20");
 			_write(0x0040, "00 30");
 			_write(0x3000, "DF");
 			CPU->Run();
@@ -247,7 +290,7 @@ namespace emu6502test
 
 		TEST_METHOD(LDA_INDY)
 		{
-			_write("A0 30 B1 20");
+			_write("A0 30 28 B1 20");
 			_write(0x0020, "00 40");
 			_write(0x4030, "E0");
 			CPU->Run();
@@ -280,7 +323,7 @@ namespace emu6502test
 
 		TEST_METHOD(LDX_ABSY)
 		{
-			_write("A0 30 BE 00 20");
+			_write("A0 30 28 BE 00 20");
 			_write(0x2030, "C9");
 			CPU->Run();
 			AssertLastInstruction("LDX", sAbsoluteY);
@@ -302,7 +345,7 @@ namespace emu6502test
 
 		TEST_METHOD(LDX_ZPGY)
 		{
-			_write("A0 91 B6 80");
+			_write("A0 91 28 B6 80");
 			_write(0x0011, "DF");
 			CPU->Run();
 			AssertLastInstruction("LDX", sZeroPageY);
@@ -334,7 +377,7 @@ namespace emu6502test
 		
 		TEST_METHOD(LDY_ABSX)
 		{
-			_write("A2 30 BC 00 20");
+			_write("A2 30 28 BC 00 20");
 			_write(0x2030, "CA");
 			CPU->Run();
 			AssertLastInstruction("LDY", sAbsoluteX);
@@ -356,7 +399,7 @@ namespace emu6502test
 
 		TEST_METHOD(LDY_ZPGX)
 		{
-			_write("A2 20 B4 80");
+			_write("A2 20 28 B4 80");
 			_write(0x00A0, "E0");
 			CPU->Run();
 			AssertLastInstruction("LDY", sZeroPageX);
@@ -380,7 +423,7 @@ namespace emu6502test
 
 		TEST_METHOD(STA_ABS)
 		{
-			_write("A9 D5 8D 00 20");
+			_write("A9 D5 28 8D 00 20");
 			CPU->Run();
 			AssertLastInstruction("STA", sAbsolute);
 			Assert::AreEqual(0xD5, (int)RAM[0x2000]);
@@ -388,7 +431,7 @@ namespace emu6502test
 
 		TEST_METHOD(STA_ABSX)
 		{
-			_write("A9 D6 A2 C7 9D 00 20");
+			_write("A9 D6 A2 C7 28 9D 00 20");
 			CPU->Run();
 			AssertLastInstruction("STA", sAbsoluteX);
 			Assert::AreEqual(0xD6, (int)RAM[0x20C7]);
@@ -396,7 +439,7 @@ namespace emu6502test
 
 		TEST_METHOD(STA_ABSY)
 		{
-			_write("A9 D7 A0 B7 99 00 20");
+			_write("A9 D7 A0 B7 28 99 00 20");
 			CPU->Run();
 			AssertLastInstruction("STA", sAbsoluteY);
 			Assert::AreEqual(0xD7, (int)RAM[0x20B7]);
@@ -404,7 +447,7 @@ namespace emu6502test
 
 		TEST_METHOD(STA_ZPG)
 		{
-			_write("A9 D8 85 20");
+			_write("A9 D8 28 85 20");
 			CPU->Run();
 			AssertLastInstruction("STA", sZeroPage);
 			Assert::AreEqual(0xD8, (int)RAM[0x0020]);
@@ -412,7 +455,7 @@ namespace emu6502test
 
 		TEST_METHOD(STA_ZPGX)
 		{
-			_write("A9 D9 A2 10 95 20");
+			_write("A9 D9 A2 10 28 95 20");
 			CPU->Run();
 			AssertLastInstruction("STA", sZeroPageX);
 			Assert::AreEqual(0xD9, (int)RAM[0x0030]);
@@ -420,7 +463,7 @@ namespace emu6502test
 
 		TEST_METHOD(STA_XIND)
 		{
-			_write("A9 DA A2 10 81 20");
+			_write("A9 DA A2 10 28 81 20");
 			_write(0x0030, "16 20");
 			CPU->Run();
 			AssertLastInstruction("STA", sXIndirect);
@@ -429,7 +472,7 @@ namespace emu6502test
 
 		TEST_METHOD(STA_INDY)
 		{
-			_write("A9 DB A0 20 91 60");
+			_write("A9 DB A0 20 28 91 60");
 			_write(0x0060, "11 30");
 			CPU->Run();
 			AssertLastInstruction("STA", sIndirectY);
@@ -438,7 +481,7 @@ namespace emu6502test
 
 		TEST_METHOD(STX_ABS)
 		{
-			_write("A2 75 8E 00 21");
+			_write("A2 75 28 8E 00 21");
 			CPU->Run();
 			AssertLastInstruction("STX", sAbsolute);
 			Assert::AreEqual(0x75, (int)RAM[0x2100]);
@@ -446,7 +489,7 @@ namespace emu6502test
 
 		TEST_METHOD(STX_ZPG)
 		{
-			_write("A2 77 86 38");
+			_write("A2 77 28 86 38");
 			CPU->Run();
 			AssertLastInstruction("STX", sZeroPage);
 			Assert::AreEqual(0x77, (int)RAM[0x0038]);
@@ -454,7 +497,7 @@ namespace emu6502test
 
 		TEST_METHOD(STX_ZPGY)
 		{
-			_write("A2 76 A0 10 96 40");
+			_write("A2 76 A0 10 28 96 40");
 			CPU->Run();
 			AssertLastInstruction("STX", sZeroPageY);
 			Assert::AreEqual(0x76, (int)RAM[0x0050]);
@@ -462,7 +505,7 @@ namespace emu6502test
 
 		TEST_METHOD(STY_ABS)
 		{
-			_write("A0 11 8C 10 40");
+			_write("A0 11 28 8C 10 40");
 			CPU->Run();
 			AssertLastInstruction("STY", sAbsolute);
 			Assert::AreEqual(0x11, (int)RAM[0x4010]);
@@ -470,7 +513,7 @@ namespace emu6502test
 
 		TEST_METHOD(STY_ZPG)
 		{
-			_write("A0 12 84 45");
+			_write("A0 12 28 84 45");
 			CPU->Run();
 			AssertLastInstruction("STY", sZeroPage);
 			Assert::AreEqual(0x12, (int)RAM[0x0045]);
@@ -478,7 +521,7 @@ namespace emu6502test
 
 		TEST_METHOD(STY_ZPGX)
 		{
-			_write("A0 13 A2 20 94 60");
+			_write("A0 13 A2 20 28 94 60");
 			CPU->Run();
 			AssertLastInstruction("STY", sZeroPageX);
 			Assert::AreEqual(0x13, (int)RAM[0x0080]);
@@ -499,7 +542,7 @@ namespace emu6502test
 
 		TEST_METHOD(TAX)
 		{
-			_write("A9 3A A2 FF AA");
+			_write("A9 3A A2 FF 28 AA");
 			CPU->Run();
 			AssertLastInstruction("TAX");
 			Assert::AreEqual(0x3A, (int)CPU->X);
@@ -509,7 +552,7 @@ namespace emu6502test
 
 		TEST_METHOD(TAY)
 		{
-			_write("A9 3B A0 FF A8");
+			_write("A9 3B A0 FF 28 A8");
 			CPU->Run();
 			AssertLastInstruction("TAY");
 			Assert::AreEqual(0x3B, (int)CPU->Y);
@@ -519,7 +562,7 @@ namespace emu6502test
 
 		TEST_METHOD(TSX)
 		{
-			_write("A2 FF BA");
+			_write("A2 FF 28 BA");
 			CPU->Run();
 			AssertLastInstruction("TSX");
 			Assert::AreEqual((int)CPU->S, (int)CPU->X);
@@ -529,7 +572,7 @@ namespace emu6502test
 
 		TEST_METHOD(TXA)
 		{
-			_write("A9 FF A2 D1 8A");
+			_write("A9 FF A2 D1 28 8A");
 			CPU->Run();
 			AssertLastInstruction("TXA");
 			Assert::AreEqual(0xD1, (int)CPU->A);
@@ -539,7 +582,7 @@ namespace emu6502test
 
 		TEST_METHOD(TXS)
 		{
-			_write("A2 D3 9A");
+			_write("A2 D3 28 9A");
 			CPU->Run();
 			AssertLastInstruction("TXS");
 			Assert::AreEqual(0xD3, (int)CPU->S);
@@ -549,7 +592,7 @@ namespace emu6502test
 
 		TEST_METHOD(TYA)
 		{
-			_write("A9 FF A0 D2 98");
+			_write("A9 FF A0 D2 28 98");
 			CPU->Run();
 			AssertLastInstruction("TYA");
 			Assert::AreEqual(0xD2, (int)CPU->A);
@@ -581,7 +624,8 @@ namespace emu6502test
 
 		TEST_METHOD(PLA)
 		{
-			_write("A9 6A 48 A9 FF 68");
+			// we can't pull P here because we need to pull A first
+			_write("A9 6A 48 A9 01 68");
 			CPU->Run();
 			AssertLastInstruction("PLA");
 			Assert::AreEqual(0x6A, (int)CPU->A);
@@ -597,10 +641,11 @@ namespace emu6502test
 
 		TEST_METHOD(PLP)
 		{
-			_write("A9 31 48 28");
+			_write("A9 31 48 28"); // LDA #$31 PHA PLP (carry is set)
 			CPU->Run();
 			AssertLastInstruction("PLP");
 			Assert::AreEqual(0x31, (int)CPU->P);
+			AssertCarry(true); // PLP doesn't affect the carry but our code does
 		}
 	};
 
@@ -621,7 +666,7 @@ namespace emu6502test
 			_write("38");
 			CPU->Run();
 			AssertLastInstruction("SEC");
-			Assert::IsTrue(CPU->FlagCarry());
+			AssertCarry(true);
 		}
 
 		TEST_METHOD(SED)
@@ -629,7 +674,7 @@ namespace emu6502test
 			_write("F8");
 			CPU->Run();
 			AssertLastInstruction("SED");
-			Assert::IsTrue(CPU->FlagDecimal());
+			AssertDecimal(true);
 		}
 
 		TEST_METHOD(SEI)
@@ -637,7 +682,7 @@ namespace emu6502test
 			_write("78");
 			CPU->Run();
 			AssertLastInstruction("SEI");
-			Assert::IsTrue(CPU->FlagInterrupt());
+			AssertInterrupt(true);
 		}
 
 		TEST_METHOD(CLC)
@@ -645,7 +690,7 @@ namespace emu6502test
 			_write("38 18");
 			CPU->Run();
 			AssertLastInstruction("CLC");
-			Assert::IsFalse(CPU->FlagCarry());
+			AssertCarry(false);
 		}
 
 		TEST_METHOD(CLD)
@@ -653,7 +698,7 @@ namespace emu6502test
 			_write("F8 D8");
 			CPU->Run();
 			AssertLastInstruction("CLD");
-			Assert::IsFalse(CPU->FlagDecimal());
+			AssertDecimal(false);
 		}
 
 		TEST_METHOD(CLI)
@@ -661,15 +706,16 @@ namespace emu6502test
 			_write("78 58");
 			CPU->Run();
 			AssertLastInstruction("CLI");
-			Assert::IsFalse(CPU->FlagInterrupt());
+			AssertInterrupt(false);
 		}
 
 		TEST_METHOD(CLV)
 		{
-			_write("A9 40 48 28 B8");
+			_write("A9 7F 69 7F B8");
 			CPU->Run();
 			AssertLastInstruction("CLV");
-			Assert::IsFalse(CPU->FlagOverflow());
+			AssertOverflow(false);
+			AssertNegative(true);
 		}
 	};
 
@@ -687,7 +733,7 @@ namespace emu6502test
 
 		TEST_METHOD(AND_IMM)
 		{
-			_write("A9 55 29 0F");
+			_write("A9 55 28 29 0F");
 			CPU->Run();
 			AssertLastInstruction("AND", sImmediate);
 			Assert::AreEqual(0x05, (int)CPU->A);
@@ -697,7 +743,7 @@ namespace emu6502test
 
 		TEST_METHOD(AND_ABS)
 		{
-			_write("A9 66 2D 00 20");
+			_write("A9 66 28 2D 00 20");
 			_write(0x2000, "F0");
 			CPU->Run();
 			AssertLastInstruction("AND", sAbsolute);
@@ -708,7 +754,7 @@ namespace emu6502test
 
 		TEST_METHOD(AND_ABSX)
 		{
-			_write("A9 77 A2 10 3D 00 20");
+			_write("A9 77 A2 10 28 3D 00 20");
 			_write(0x2010, "0F");
 			CPU->Run();
 			AssertLastInstruction("AND", sAbsoluteX);
@@ -719,7 +765,7 @@ namespace emu6502test
 
 		TEST_METHOD(AND_ABSY)
 		{
-			_write("A9 88 A0 20 39 00 20");
+			_write("A9 88 A0 20 28 39 00 20");
 			_write(0x2020, "F0");
 			CPU->Run();
 			AssertLastInstruction("AND", sAbsoluteY);
@@ -730,7 +776,7 @@ namespace emu6502test
 
 		TEST_METHOD(AND_ZPG)
 		{
-			_write("A9 99 25 48");
+			_write("A9 99 28 25 48");
 			_write(0x0048, "0F");
 			CPU->Run();
 			AssertLastInstruction("AND", sZeroPage);
@@ -741,7 +787,7 @@ namespace emu6502test
 
 		TEST_METHOD(AND_ZPGX)
 		{
-			_write("A9 AA A2 10 35 58");
+			_write("A9 AA A2 10 28 35 58");
 			_write(0x0068, "55");
 			CPU->Run();
 			AssertLastInstruction("AND", sZeroPageX);
@@ -752,7 +798,7 @@ namespace emu6502test
 
 		TEST_METHOD(AND_XIND)
 		{
-			_write("A9 BB A2 30 21 70");
+			_write("A9 BB A2 30 28 21 70");
 			_write(0x00A0, "10 20");
 			_write(0x2010, "0F");
 			CPU->Run();
@@ -764,7 +810,7 @@ namespace emu6502test
 
 		TEST_METHOD(AND_INDY)
 		{
-			_write("A9 CC A0 18 31 35");
+			_write("A9 CC A0 18 28 31 35");
 			_write(0x0035, "10 20");
 			_write(0x2028, "F0");
 			CPU->Run();
@@ -789,7 +835,7 @@ namespace emu6502test
 
 		TEST_METHOD(ORA_IMM)
 		{
-			_write("A9 05 09 A0");
+			_write("A9 05 28 09 A0");
 			CPU->Run();
 			AssertLastInstruction("ORA", sImmediate);
 			Assert::AreEqual(0xA5, (int)CPU->A);
@@ -799,7 +845,7 @@ namespace emu6502test
 
 		TEST_METHOD(ORA_ABS)
 		{
-			_write("A9 06 0D 00 20");
+			_write("A9 06 28 0D 00 20");
 			_write(0x2000, "B0");
 			CPU->Run();
 			AssertLastInstruction("ORA", sAbsolute);
@@ -810,7 +856,7 @@ namespace emu6502test
 
 		TEST_METHOD(ORA_ABSX)
 		{
-			_write("A9 07 A2 20 1D 00 30");
+			_write("A9 07 A2 20 28 1D 00 30");
 			_write(0x3020, "C0");
 			CPU->Run();
 			AssertLastInstruction("ORA", sAbsoluteX);
@@ -821,7 +867,7 @@ namespace emu6502test
 
 		TEST_METHOD(ORA_ABSY)
 		{
-			_write("A9 08 A0 30 19 00 40");
+			_write("A9 08 A0 30 28 19 00 40");
 			_write(0x4030, "D0");
 			CPU->Run();
 			AssertLastInstruction("ORA", sAbsoluteY);
@@ -832,7 +878,7 @@ namespace emu6502test
 
 		TEST_METHOD(ORA_ZPG)
 		{
-			_write("A9 09 05 78");
+			_write("A9 09 28 05 78");
 			_write(0x0078, "E0");
 			CPU->Run();
 			AssertLastInstruction("ORA", sZeroPage);
@@ -843,7 +889,7 @@ namespace emu6502test
 
 		TEST_METHOD(ORA_ZPGX)
 		{
-			_write("A9 0A A2 10 15 38");
+			_write("A9 0A A2 10 28 15 38");
 			_write(0x0048, "F0");
 			CPU->Run();
 			AssertLastInstruction("ORA", sZeroPageX);
@@ -854,7 +900,7 @@ namespace emu6502test
 
 		TEST_METHOD(ORA_XIND)
 		{
-			_write("A9 0B A2 38 01 40");
+			_write("A9 0B A2 38 28 01 40");
 			_write(0x0078, "10 50");
 			_write(0x5010, "10");
 			CPU->Run();
@@ -866,7 +912,7 @@ namespace emu6502test
 
 		TEST_METHOD(ORA_INDY)
 		{
-			_write("A9 0C A0 20 11 60");
+			_write("A9 0C A0 20 28 11 60");
 			_write(0x0060, "00 40");
 			_write(0x4020, "20");
 			CPU->Run();
@@ -891,7 +937,7 @@ namespace emu6502test
 
 		TEST_METHOD(EOR_IMM)
 		{
-			_write("A9 FF 49 AA");
+			_write("A9 FF 28 49 AA");
 			CPU->Run();
 			AssertLastInstruction("EOR", sImmediate);
 			Assert::AreEqual(0x55, (int)CPU->A);
@@ -901,7 +947,7 @@ namespace emu6502test
 
 		TEST_METHOD(EOR_ABS)
 		{
-			_write("A9 F0 4D 00 20");
+			_write("A9 F0 28 4D 00 20");
 			_write(0x2000, "38");
 			CPU->Run();
 			AssertLastInstruction("EOR", sAbsolute);
@@ -912,7 +958,7 @@ namespace emu6502test
 
 		TEST_METHOD(EOR_ABSX)
 		{
-			_write("A9 09 A2 10 5D 00 30");
+			_write("A9 09 A2 10 28 5D 00 30");
 			_write(0x3010, "C8");
 			CPU->Run();
 			AssertLastInstruction("EOR", sAbsoluteX);
@@ -923,7 +969,7 @@ namespace emu6502test
 
 		TEST_METHOD(EOR_ABSY)
 		{
-			_write("A9 90 A0 20 59 00 30");
+			_write("A9 90 A0 20 28 59 00 30");
 			_write(0x3020, "8C");
 			CPU->Run();
 			AssertLastInstruction("EOR", sAbsoluteY);
@@ -934,7 +980,7 @@ namespace emu6502test
 
 		TEST_METHOD(EOR_ZPG)
 		{
-			_write("A9 5A 45 88");
+			_write("A9 5A 28 45 88");
 			_write(0x0088, "FF");
 			CPU->Run();
 			AssertLastInstruction("EOR", sZeroPage);
@@ -945,7 +991,7 @@ namespace emu6502test
 
 		TEST_METHOD(EOR_ZPGX)
 		{
-			_write("A9 A5 A2 10 55 98");
+			_write("A9 A5 A2 10 28 55 98");
 			_write(0x00A8, "F0");
 			CPU->Run();
 			AssertLastInstruction("EOR", sZeroPageX);
@@ -956,7 +1002,7 @@ namespace emu6502test
 
 		TEST_METHOD(EOR_XIND)
 		{
-			_write("A9 FF A2 50 41 10");
+			_write("A9 FF A2 50 28 41 10");
 			_write(0x0060, "00 71");
 			_write(0x7100, "55");
 			CPU->Run();
@@ -968,7 +1014,7 @@ namespace emu6502test
 
 		TEST_METHOD(EOR_INDY)
 		{
-			_write("A9 FF A0 20 51 20");
+			_write("A9 FF A0 20 28 51 20");
 			_write(0x0020, "00 26");
 			_write(0x2620, "AA");
 			CPU->Run();
@@ -993,7 +1039,7 @@ namespace emu6502test
 
 		TEST_METHOD(ASL_A)
 		{
-			_write("A9 87 18 0A");
+			_write("A9 87 28 18 0A");
 			CPU->Run();
 			AssertLastInstruction("ASL A");
 			Assert::AreEqual(0x0E, (int)CPU->A);
@@ -1004,7 +1050,7 @@ namespace emu6502test
 
 		TEST_METHOD(ASL_ABS)
 		{
-			_write("18 0E 00 20");
+			_write("28 0E 00 20");
 			_write(0x2000, "55");
 			CPU->Run();
 			AssertLastInstruction("ASL", sAbsolute);
@@ -1016,7 +1062,7 @@ namespace emu6502test
 
 		TEST_METHOD(ASL_ABSX)
 		{
-			_write("A2 30 18 1E 50 30");
+			_write("A2 30 28 1E 50 30");
 			_write(0x3080, "80");
 			CPU->Run();
 			AssertLastInstruction("ASL", sAbsoluteX);
@@ -1028,7 +1074,7 @@ namespace emu6502test
 
 		TEST_METHOD(ASL_ZPG)
 		{
-			_write("18 06 20");
+			_write("28 06 20");
 			_write(0x0020, "55");
 			CPU->Run();
 			AssertLastInstruction("ASL", sZeroPage);
@@ -1040,7 +1086,7 @@ namespace emu6502test
 
 		TEST_METHOD(ASL_ZPGX)
 		{
-			_write("A2 30 18 16 30");
+			_write("A2 30 28 16 30");
 			_write(0x0060, "C0");
 			CPU->Run();
 			AssertLastInstruction("ASL", sZeroPageX);
@@ -1052,7 +1098,7 @@ namespace emu6502test
 
 		TEST_METHOD(LSR_A)
 		{
-			_write("A9 87 4A");
+			_write("A9 87 28 4A");
 			CPU->Run();
 			AssertLastInstruction("LSR A");
 			Assert::AreEqual(0x43, (int)CPU->A);
@@ -1075,7 +1121,7 @@ namespace emu6502test
 
 		TEST_METHOD(LSR_ABSX)
 		{
-			_write("A2 30 5E 50 30");
+			_write("A2 30 28 5E 50 30");
 			_write(0x3080, "01");
 			CPU->Run();
 			AssertLastInstruction("LSR", sAbsoluteX);
@@ -1099,7 +1145,7 @@ namespace emu6502test
 
 		TEST_METHOD(LSR_ZPGX)
 		{
-			_write("A2 30 56 30");
+			_write("A2 30 28 56 30");
 			_write(0x0060, "C0");
 			CPU->Run();
 			AssertLastInstruction("LSR", sZeroPageX);
@@ -1124,7 +1170,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROL_A)
 		{
-			_write("A9 87 18 2A");
+			_write("A9 87 28 2A");
 			CPU->Run();
 			AssertLastInstruction("ROL A");
 			Assert::AreEqual(0x0E, (int)CPU->A);
@@ -1135,6 +1181,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROL_ABS)
 		{
+			// no PLP here because we want the carry set
 			_write("38 2E 00 20");
 			_write(0x2000, "55");
 			CPU->Run();
@@ -1147,7 +1194,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROL_ABSX)
 		{
-			_write("A2 30 18 3E 50 30");
+			_write("A2 30 28 3E 50 30");
 			_write(0x3080, "80");
 			CPU->Run();
 			AssertLastInstruction("ROL", sAbsoluteX);
@@ -1159,7 +1206,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROL_ZPG)
 		{
-			_write("18 26 20");
+			_write("26 20");
 			_write(0x0020, "55");
 			CPU->Run();
 			AssertLastInstruction("ROL", sZeroPage);
@@ -1171,7 +1218,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROL_ZPGX)
 		{
-			_write("A2 30 18 36 30");
+			_write("A2 30 28 36 30");
 			_write(0x0060, "C4");
 			CPU->Run();
 			AssertLastInstruction("ROL", sZeroPageX);
@@ -1183,7 +1230,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROR_A)
 		{
-			_write("A9 87 18 6A");
+			_write("A9 87 28 6A");
 			CPU->Run();
 			AssertLastInstruction("ROR A");
 			Assert::AreEqual(0x43, (int)CPU->A);
@@ -1194,7 +1241,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROR_ABS)
 		{
-			_write("18 6E 00 20");
+			_write("6E 00 20");
 			_write(0x2000, "55");
 			CPU->Run();
 			AssertLastInstruction("ROR", sAbsolute);
@@ -1206,6 +1253,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROR_ABSX)
 		{
+			// no PLP here because we want the carry set
 			_write("A2 30 38 7E 50 30");
 			_write(0x3080, "01");
 			CPU->Run();
@@ -1218,7 +1266,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROR_ZPG)
 		{
-			_write("18 66 20");
+			_write("66 20");
 			_write(0x0020, "FF");
 			CPU->Run();
 			AssertLastInstruction("ROR", sZeroPage);
@@ -1230,7 +1278,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROR_ZPGX)
 		{
-			_write("A2 30 18 76 30");
+			_write("A2 30 28 76 30");
 			_write(0x0060, "C0");
 			CPU->Run();
 			AssertLastInstruction("ROR", sZeroPageX);
@@ -1255,7 +1303,7 @@ namespace emu6502test
 
 		TEST_METHOD(CMP_IMM)
 		{
-			_write("A9 60 C9 61");
+			_write("A9 60 28 C9 61");
 			CPU->Run();
 			AssertLastInstruction("CMP", sImmediate);
 			AssertCarry(false);
@@ -1265,7 +1313,7 @@ namespace emu6502test
 
 		TEST_METHOD(CMP_ABS)
 		{
-			_write("A9 10 CD 00 30");
+			_write("A9 10 28 CD 00 30");
 			_write(0x3000, "F0");
 			CPU->Run();
 			AssertLastInstruction("CMP", sAbsolute);
@@ -1276,7 +1324,7 @@ namespace emu6502test
 
 		TEST_METHOD(CMP_ABSX)
 		{
-			_write("A9 F0 A2 10 DD 00 30");
+			_write("A9 F0 A2 10 28 DD 00 30");
 			_write(0x3010, "F0");
 			CPU->Run();
 			AssertLastInstruction("CMP", sAbsoluteX);
@@ -1287,7 +1335,7 @@ namespace emu6502test
 
 		TEST_METHOD(CMP_ABSY)
 		{
-			_write("A9 AA A0 20 D9 00 40");
+			_write("A9 AA A0 20 28 D9 00 40");
 			_write(0x4020, "55");
 			CPU->Run();
 			AssertLastInstruction("CMP", sAbsoluteY);
@@ -1298,7 +1346,7 @@ namespace emu6502test
 
 		TEST_METHOD(CMP_ZPG)
 		{
-			_write("A9 10 C5 30");
+			_write("A9 10 28 C5 30");
 			_write(0x0030, "F0");
 			CPU->Run();
 			AssertLastInstruction("CMP", sZeroPage);
@@ -1309,7 +1357,7 @@ namespace emu6502test
 
 		TEST_METHOD(CMP_ZPGX)
 		{
-			_write("A9 F0 A2 10 D5 30");
+			_write("A9 F0 A2 10 28 D5 30");
 			_write(0x0040, "F0");
 			CPU->Run();
 			AssertLastInstruction("CMP", sZeroPageX);
@@ -1320,7 +1368,7 @@ namespace emu6502test
 
 		TEST_METHOD(CMP_XIND)
 		{
-			_write("A9 40 A2 50 C1 40");
+			_write("A9 40 A2 50 28 C1 40");
 			_write(0x0090, "00 30");
 			_write(0x3000, "80");
 			CPU->Run();
@@ -1332,7 +1380,7 @@ namespace emu6502test
 
 		TEST_METHOD(CMP_INDY)
 		{
-			_write("A9 80 A0 20 D1 30");
+			_write("A9 80 A0 20 28 D1 30");
 			_write(0x0030, "00 30");
 			_write(0x3020, "40");
 			CPU->Run();
@@ -1344,7 +1392,7 @@ namespace emu6502test
 
 		TEST_METHOD(CPX_IMM)
 		{
-			_write("A2 60 E0 61");
+			_write("A2 60 28 E0 61");
 			CPU->Run();
 			AssertLastInstruction("CPX", sImmediate);
 			AssertCarry(false);
@@ -1354,7 +1402,7 @@ namespace emu6502test
 
 		TEST_METHOD(CPX_ABS)
 		{
-			_write("A2 10 EC 00 30");
+			_write("A2 10 28 EC 00 30");
 			_write(0x3000, "F0");
 			CPU->Run();
 			AssertLastInstruction("CPX", sAbsolute);
@@ -1365,7 +1413,7 @@ namespace emu6502test
 
 		TEST_METHOD(CPX_ZPG)
 		{
-			_write("A2 10 E4 30");
+			_write("A2 10 28 E4 30");
 			_write(0x0030, "F0");
 			CPU->Run();
 			AssertLastInstruction("CPX", sZeroPage);
@@ -1376,7 +1424,7 @@ namespace emu6502test
 
 		TEST_METHOD(CPY_IMM)
 		{
-			_write("A0 61 C0 60");
+			_write("A0 61 28 C0 60");
 			CPU->Run();
 			AssertLastInstruction("CPY", sImmediate);
 			AssertCarry(true);
@@ -1386,7 +1434,7 @@ namespace emu6502test
 
 		TEST_METHOD(CPY_ABS)
 		{
-			_write("A0 10 CC 00 30");
+			_write("A0 10 28 CC 00 30");
 			_write(0x3000, "F0");
 			CPU->Run();
 			AssertLastInstruction("CPY", sAbsolute);
@@ -1397,7 +1445,7 @@ namespace emu6502test
 
 		TEST_METHOD(CPY_ZPG)
 		{
-			_write("A0 10 C4 30");
+			_write("A0 10 28 C4 30");
 			_write(0x0030, "F6");
 			CPU->Run();
 			AssertLastInstruction("CPY", sZeroPage);
@@ -1432,7 +1480,7 @@ namespace emu6502test
 
 		TEST_METHOD(INC_ABSX)
 		{
-			_write("A2 50 FE 00 30");
+			_write("A2 50 28 FE 00 30");
 			_write(0x3050, "FF");
 			CPU->Run();
 			AssertLastInstruction("INC", sAbsoluteX);
@@ -1454,7 +1502,7 @@ namespace emu6502test
 
 		TEST_METHOD(INC_ZPGX)
 		{
-			_write("A2 40 F6 40");
+			_write("A2 40 28 F6 40");
 			_write(0x0080, "FE");
 			CPU->Run();
 			AssertLastInstruction("INC", sZeroPageX);
@@ -1465,7 +1513,7 @@ namespace emu6502test
 
 		TEST_METHOD(INX)
 		{
-			_write("A2 0F E8");
+			_write("A2 0F 28 E8");
 			CPU->Run();
 			AssertLastInstruction("INX");
 			Assert::AreEqual(0x10, (int)CPU->X);
@@ -1475,7 +1523,7 @@ namespace emu6502test
 
 		TEST_METHOD(INY)
 		{
-			_write("A0 FF C8");
+			_write("A0 FF 28 C8");
 			CPU->Run();
 			AssertLastInstruction("INY");
 			Assert::AreEqual(0x00, (int)CPU->Y);
@@ -1509,7 +1557,7 @@ namespace emu6502test
 
 		TEST_METHOD(DEC_ABSX)
 		{
-			_write("A2 50 DE 00 30");
+			_write("A2 50 28 DE 00 30");
 			_write(0x3050, "00");
 			CPU->Run();
 			AssertLastInstruction("DEC", sAbsoluteX);
@@ -1531,7 +1579,7 @@ namespace emu6502test
 
 		TEST_METHOD(DEC_ZPGX)
 		{
-			_write("A2 40 D6 40");
+			_write("A2 40 28 D6 40");
 			_write(0x0080, "FF");
 			CPU->Run();
 			AssertLastInstruction("DEC", sZeroPageX);
@@ -1542,7 +1590,7 @@ namespace emu6502test
 
 		TEST_METHOD(DEX)
 		{
-			_write("A2 0F CA");
+			_write("A2 0F 28 CA");
 			CPU->Run();
 			AssertLastInstruction("DEX");
 			Assert::AreEqual(0x0E, (int)CPU->X);
@@ -1552,7 +1600,7 @@ namespace emu6502test
 
 		TEST_METHOD(DEY)
 		{
-			_write("A0 00 88");
+			_write("A0 00 28 88");
 			CPU->Run();
 			AssertLastInstruction("DEY");
 			Assert::AreEqual(0xFF, (int)CPU->Y);
@@ -1575,7 +1623,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_IMM)
 		{
-			_write("A9 01 18 69 01");
+			_write("A9 01 28 69 01");
 			CPU->Run();
 			AssertLastInstruction("ADC", sImmediate);
 			Assert::AreEqual(0x02, (int)CPU->A);
@@ -1587,6 +1635,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_ABS)
 		{
+			// no PLP here because we want the carry set
 			_write("A9 FF 38 6D 00 20");
 			_write(0x2000, "FF");
 			CPU->Run();
@@ -1600,7 +1649,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_ABSX)
 		{
-			_write("A9 80 A2 10 18 7D 00 20");
+			_write("A9 80 A2 10 28 7D 00 20");
 			_write(0x2010, "80");
 			CPU->Run();
 			AssertLastInstruction("ADC", sAbsoluteX);
@@ -1613,7 +1662,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_ABSY)
 		{
-			_write("A9 0A A0 20 18 79 00 20");
+			_write("A9 0A A0 20 28 79 00 20");
 			_write(0x2020, "F6");
 			CPU->Run();
 			AssertLastInstruction("ADC", sAbsoluteY);
@@ -1626,7 +1675,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_ZPG)
 		{
-			_write("A9 20 18 65 48");
+			_write("A9 20 28 65 48");
 			_write(0x0048, "40");
 			CPU->Run();
 			AssertLastInstruction("ADC", sZeroPage);
@@ -1639,7 +1688,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_ZPGX)
 		{
-			_write("A9 F6 A2 10 18 75 58");
+			_write("A9 F6 A2 10 28 75 58");
 			_write(0x0068, "F6");
 			CPU->Run();
 			AssertLastInstruction("ADC", sZeroPageX);
@@ -1652,6 +1701,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_XIND)
 		{
+			// no PLP here because we want the carry set
 			_write("A9 0F A2 30 38 61 70");
 			_write(0x00A0, "10 20");
 			_write(0x2010, "0F");
@@ -1666,6 +1716,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_INDY)
 		{
+			// no PLP here because we want the carry set
 			_write("A9 7F A0 18 38 71 35");
 			_write(0x0035, "10 20");
 			_write(0x2028, "7F");

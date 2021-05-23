@@ -25,6 +25,18 @@ using word = unsigned short;
 
 // TODO: add a namespace?
 
+// status register flags
+enum Flags : byte {
+	fCarry = 1,
+	fZero = 2,
+	fInterrupt = 4,
+	fDecimal = 8,
+	fBreak = 16,	// always set to 1
+	// status bit 5 is always set to 1
+	fOverflow = 64,
+	fNegative = 128
+};
+
 // equivalent to addressing modes plus extra for transfer instructions
 enum SourceType {
 	sAccumulator,	// TAX, TAY
@@ -62,17 +74,6 @@ protected:
 	const word InterruptVector				= 0xFFFE;
 
 	const byte BreakOpCode = 0x00;
-
-	enum Flags : byte {
-		fCarry		=   1,
-		fZero		=   2,
-		fInterrupt	=   4,
-		fDecimal	=   8,
-		fBreak		=  16,	// always set to 1
-		// status bit 5 is always set to 1
-		fOverflow	=  64,
-		fNegative	= 128
-	};
 
 	struct Instruction {
 		byte			OpCode;
