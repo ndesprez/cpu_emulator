@@ -1978,4 +1978,102 @@ namespace emu6502test
 			AssertFlagsUnchanged();
 		}
 	};
+
+	TEST_CLASS(Branch)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(BCC)
+		{
+			_write("18 90 0F");
+			_write(0x1013, "00");
+			CPU->Run();
+			AssertLastInstruction("BCC");
+			Assert::AreEqual(0x1013, (int)CPU->PC - 1); // -1 to account for BRK
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(BCS)
+		{
+			_write("38 B0 F0");
+			_write(0x0FF4, "00");
+			CPU->Run();
+			AssertLastInstruction("BCS");
+			Assert::AreEqual(0x0FF4, (int)CPU->PC - 1);
+			AssertCarry(true);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(BEQ)
+		{
+			_write("A9 00 F0 7F");
+			_write(0x1084, "00");
+			CPU->Run();
+			AssertLastInstruction("BEQ");
+			Assert::AreEqual(0x1084, (int)CPU->PC - 1);
+			AssertZero(true);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(BNE)
+		{
+			_write("A9 01 D0 80");
+			_write(0x0F85, "00");
+			CPU->Run();
+			AssertLastInstruction("BNE");
+			Assert::AreEqual(0x0F85, (int)CPU->PC - 1);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(BMI)
+		{
+			_write("A9 FF 30 7F");
+			_write(0x1084, "00");
+			CPU->Run();
+			AssertLastInstruction("BMI");
+			Assert::AreEqual(0x1084, (int)CPU->PC - 1);
+			AssertNegative(true);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(BPL)
+		{
+			_write("A9 01 10 80");
+			_write(0x0F85, "00");
+			CPU->Run();
+			AssertLastInstruction("BPL");
+			Assert::AreEqual(0x0F85, (int)CPU->PC - 1);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(BVS)
+		{
+			_write("A9 7F 69 7F 70 7F");
+			_write(0x1086, "00");
+			CPU->Run();
+			AssertLastInstruction("BVS");
+			Assert::AreEqual(0x1086, (int)CPU->PC - 1);
+			AssertNegative(true);
+			AssertOverflow(true);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(BVC)
+		{
+			_write("50 80");
+			_write(0x0F83, "00");
+			CPU->Run();
+			AssertLastInstruction("BVC");
+			Assert::AreEqual(0x0F83, (int)CPU->PC - 1);
+			AssertFlagsUnchanged();
+		}
+	};
 }
