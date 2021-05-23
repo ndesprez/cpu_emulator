@@ -711,7 +711,7 @@ namespace emu6502test
 
 		TEST_METHOD(CLV)
 		{
-			_write("A9 7F 69 7F B8");
+			_write("A9 7F 69 7F B8"); // forces an overflow then clears it
 			CPU->Run();
 			AssertLastInstruction("CLV");
 			AssertOverflow(false);
@@ -1181,8 +1181,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROL_ABS)
 		{
-			// no PLP here because we want the carry set
-			_write("38 2E 00 20");
+			_write("28 38 2E 00 20");
 			_write(0x2000, "55");
 			CPU->Run();
 			AssertLastInstruction("ROL", sAbsolute);
@@ -1253,8 +1252,7 @@ namespace emu6502test
 
 		TEST_METHOD(ROR_ABSX)
 		{
-			// no PLP here because we want the carry set
-			_write("A2 30 38 7E 50 30");
+			_write("A2 30 28 38 7E 50 30");
 			_write(0x3080, "01");
 			CPU->Run();
 			AssertLastInstruction("ROR", sAbsoluteX);
@@ -1635,8 +1633,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_ABS)
 		{
-			// no PLP here because we want the carry set
-			_write("A9 FF 38 6D 00 20");
+			_write("A9 FF 28 38 6D 00 20");
 			_write(0x2000, "FF");
 			CPU->Run();
 			AssertLastInstruction("ADC", sAbsolute);
@@ -1701,8 +1698,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_XIND)
 		{
-			// no PLP here because we want the carry set
-			_write("A9 0F A2 30 38 61 70");
+			_write("A9 0F A2 30 28 38 61 70");
 			_write(0x00A0, "10 20");
 			_write(0x2010, "0F");
 			CPU->Run();
@@ -1716,8 +1712,7 @@ namespace emu6502test
 
 		TEST_METHOD(ADC_INDY)
 		{
-			// no PLP here because we want the carry set
-			_write("A9 7F A0 18 38 71 35");
+			_write("A9 7F A0 18 28 38 71 35");
 			_write(0x0035, "10 20");
 			_write(0x2028, "7F");
 			CPU->Run();
