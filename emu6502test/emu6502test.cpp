@@ -56,7 +56,7 @@ namespace emu6502test
 
 	void AssertCarry(bool Value)
 	{
-		UnchangedFlagsMask &= !fCarry;
+		UnchangedFlagsMask &= ~fCarry;
 		if(Value)
 			Assert::IsTrue(CPU->FlagCarry(), MessageCarryFalse);
 		else
@@ -65,7 +65,7 @@ namespace emu6502test
 	
 	void AssertZero(bool Value)
 	{
-		UnchangedFlagsMask &= !fZero;
+		UnchangedFlagsMask &= ~fZero;
 		if (Value)
 			Assert::IsTrue(CPU->FlagZero(), MessageZeroFalse);
 		else
@@ -74,7 +74,7 @@ namespace emu6502test
 
 	void AssertInterrupt(bool Value)
 	{
-		UnchangedFlagsMask &= !fInterrupt;
+		UnchangedFlagsMask &= ~fInterrupt;
 		if (Value)
 			Assert::IsTrue(CPU->FlagInterrupt(), MessageInterruptFalse);
 		else
@@ -83,7 +83,7 @@ namespace emu6502test
 
 	void AssertDecimal(bool Value)
 	{
-		UnchangedFlagsMask &= !fDecimal;
+		UnchangedFlagsMask &= ~fDecimal;
 		if (Value)
 			Assert::IsTrue(CPU->FlagDecimal(), MessageDecimalFalse);
 		else
@@ -92,7 +92,7 @@ namespace emu6502test
 
 	void AssertOverflow(bool Value)
 	{
-		UnchangedFlagsMask &= !fOverflow;
+		UnchangedFlagsMask &= ~fOverflow;
 		if (Value)
 			Assert::IsTrue(CPU->FlagOverflow(), MessageOverflowFalse);
 		else
@@ -101,11 +101,16 @@ namespace emu6502test
 
 	void AssertNegative(bool Value)
 	{ 
-		UnchangedFlagsMask &= !fNegative;
+		UnchangedFlagsMask &= ~fNegative;
 		if(Value)
 			Assert::IsTrue(CPU->FlagNegative(), MessageNegativeFalse); 
 		else
 			Assert::IsFalse(CPU->FlagNegative(), MessageNegativeTrue);
+	}
+
+	void AssertFlagsUnchanged()
+	{
+		Assert::IsFalse((InitialStatus ^ CPU->P) & UnchangedFlagsMask, L"A status flag has changed unexpectedly.");
 	}
 
 	// AssertLastInstruction: making sure the last instruction we ran is the one we're testing
@@ -192,8 +197,6 @@ namespace emu6502test
 
 	void _method_cleanup()
 	{
-		Assert::IsFalse((InitialStatus ^ CPU->P) & UnchangedFlagsMask, L"A status flag has changed unexpectedly.");
-
 		delete CPU;
 		delete[] RAM;
 	}
@@ -219,6 +222,7 @@ namespace emu6502test
 			Assert::AreEqual(0xD5, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDA_ABS)
@@ -230,6 +234,7 @@ namespace emu6502test
 			Assert::AreEqual(0x7A, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDA_ABSX)
@@ -241,6 +246,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDB, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDA_ABSY)
@@ -252,6 +258,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDC, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDA_ZPG)
@@ -263,6 +270,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDD, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDA_ZPGX)
@@ -274,6 +282,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDE, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDA_XIND)
@@ -286,6 +295,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDF, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDA_INDY)
@@ -298,6 +308,7 @@ namespace emu6502test
 			Assert::AreEqual(0xE0, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDX_IMM)
@@ -308,6 +319,7 @@ namespace emu6502test
 			Assert::AreEqual(0xC7, (int)CPU->X);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDX_ABS)
@@ -319,6 +331,7 @@ namespace emu6502test
 			Assert::AreEqual(0xC8, (int)CPU->X);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDX_ABSY)
@@ -341,6 +354,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDE, (int)CPU->X);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDX_ZPGY)
@@ -352,6 +366,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDF, (int)CPU->X);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDY_IMM)
@@ -362,6 +377,7 @@ namespace emu6502test
 			Assert::AreEqual(0x91, (int)CPU->Y);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDY_ABS)
@@ -373,6 +389,7 @@ namespace emu6502test
 			Assert::AreEqual(0x92, (int)CPU->Y);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 		
 		TEST_METHOD(LDY_ABSX)
@@ -384,6 +401,7 @@ namespace emu6502test
 			Assert::AreEqual(0xCA, (int)CPU->Y);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDY_ZPG)
@@ -395,6 +413,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDF, (int)CPU->Y);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LDY_ZPGX)
@@ -406,6 +425,7 @@ namespace emu6502test
 			Assert::AreEqual(0xE0, (int)CPU->Y);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -427,6 +447,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STA", sAbsolute);
 			Assert::AreEqual(0xD5, (int)RAM[0x2000]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STA_ABSX)
@@ -435,6 +456,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STA", sAbsoluteX);
 			Assert::AreEqual(0xD6, (int)RAM[0x20C7]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STA_ABSY)
@@ -443,6 +465,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STA", sAbsoluteY);
 			Assert::AreEqual(0xD7, (int)RAM[0x20B7]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STA_ZPG)
@@ -451,6 +474,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STA", sZeroPage);
 			Assert::AreEqual(0xD8, (int)RAM[0x0020]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STA_ZPGX)
@@ -459,6 +483,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STA", sZeroPageX);
 			Assert::AreEqual(0xD9, (int)RAM[0x0030]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STA_XIND)
@@ -468,6 +493,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STA", sXIndirect);
 			Assert::AreEqual(0xDA, (int)RAM[0x2016]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STA_INDY)
@@ -477,6 +503,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STA", sIndirectY);
 			Assert::AreEqual(0xDB, (int)RAM[0x3031]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STX_ABS)
@@ -485,6 +512,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STX", sAbsolute);
 			Assert::AreEqual(0x75, (int)RAM[0x2100]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STX_ZPG)
@@ -493,6 +521,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STX", sZeroPage);
 			Assert::AreEqual(0x77, (int)RAM[0x0038]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STX_ZPGY)
@@ -501,6 +530,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STX", sZeroPageY);
 			Assert::AreEqual(0x76, (int)RAM[0x0050]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STY_ABS)
@@ -509,6 +539,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STY", sAbsolute);
 			Assert::AreEqual(0x11, (int)RAM[0x4010]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STY_ZPG)
@@ -517,6 +548,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STY", sZeroPage);
 			Assert::AreEqual(0x12, (int)RAM[0x0045]);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(STY_ZPGX)
@@ -525,6 +557,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("STY", sZeroPageX);
 			Assert::AreEqual(0x13, (int)RAM[0x0080]);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -548,6 +581,7 @@ namespace emu6502test
 			Assert::AreEqual(0x3A, (int)CPU->X);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(TAY)
@@ -558,6 +592,7 @@ namespace emu6502test
 			Assert::AreEqual(0x3B, (int)CPU->Y);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(TSX)
@@ -568,6 +603,7 @@ namespace emu6502test
 			Assert::AreEqual((int)CPU->S, (int)CPU->X);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(TXA)
@@ -578,6 +614,7 @@ namespace emu6502test
 			Assert::AreEqual(0xD1, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(TXS)
@@ -588,6 +625,7 @@ namespace emu6502test
 			Assert::AreEqual(0xD3, (int)CPU->S);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(TYA)
@@ -598,6 +636,7 @@ namespace emu6502test
 			Assert::AreEqual(0xD2, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -620,6 +659,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("PHA");
 			Assert::AreEqual(RAM[(word)CPU->S + 0x100 + 1], CPU->A);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(PLA)
@@ -629,6 +669,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("PLA");
 			Assert::AreEqual(0x6A, (int)CPU->A);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(PHP)
@@ -637,6 +678,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("PHP");
 			Assert::AreEqual(RAM[(word)CPU->S + 0x100 + 1], CPU->P);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(PLP)
@@ -646,6 +688,7 @@ namespace emu6502test
 			AssertLastInstruction("PLP");
 			Assert::AreEqual(0x31, (int)CPU->P);
 			AssertCarry(true); // PLP doesn't affect the carry but our code does
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -667,6 +710,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("SEC");
 			AssertCarry(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(SED)
@@ -675,6 +719,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("SED");
 			AssertDecimal(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(SEI)
@@ -683,6 +728,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("SEI");
 			AssertInterrupt(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CLC)
@@ -691,6 +737,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("CLC");
 			AssertCarry(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CLD)
@@ -699,6 +746,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("CLD");
 			AssertDecimal(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CLI)
@@ -707,6 +755,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("CLI");
 			AssertInterrupt(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CLV)
@@ -716,6 +765,7 @@ namespace emu6502test
 			AssertLastInstruction("CLV");
 			AssertOverflow(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -739,6 +789,7 @@ namespace emu6502test
 			Assert::AreEqual(0x05, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(AND_ABS)
@@ -750,6 +801,7 @@ namespace emu6502test
 			Assert::AreEqual(0x60, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(AND_ABSX)
@@ -761,6 +813,7 @@ namespace emu6502test
 			Assert::AreEqual(0x07, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(AND_ABSY)
@@ -772,6 +825,7 @@ namespace emu6502test
 			Assert::AreEqual(0x80, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(AND_ZPG)
@@ -783,6 +837,7 @@ namespace emu6502test
 			Assert::AreEqual(0x09, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(AND_ZPGX)
@@ -794,6 +849,7 @@ namespace emu6502test
 			Assert::AreEqual(0x00, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(AND_XIND)
@@ -806,6 +862,7 @@ namespace emu6502test
 			Assert::AreEqual(0x0B, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(AND_INDY)
@@ -818,6 +875,7 @@ namespace emu6502test
 			Assert::AreEqual(0xC0, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -841,6 +899,7 @@ namespace emu6502test
 			Assert::AreEqual(0xA5, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ORA_ABS)
@@ -852,6 +911,7 @@ namespace emu6502test
 			Assert::AreEqual(0xB6, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ORA_ABSX)
@@ -863,6 +923,7 @@ namespace emu6502test
 			Assert::AreEqual(0xC7, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ORA_ABSY)
@@ -874,6 +935,7 @@ namespace emu6502test
 			Assert::AreEqual(0xD8, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ORA_ZPG)
@@ -885,6 +947,7 @@ namespace emu6502test
 			Assert::AreEqual(0xE9, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ORA_ZPGX)
@@ -896,6 +959,7 @@ namespace emu6502test
 			Assert::AreEqual(0xFA, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ORA_XIND)
@@ -908,6 +972,7 @@ namespace emu6502test
 			Assert::AreEqual(0x1B, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ORA_INDY)
@@ -920,6 +985,7 @@ namespace emu6502test
 			Assert::AreEqual(0x2C, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -943,6 +1009,7 @@ namespace emu6502test
 			Assert::AreEqual(0x55, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(EOR_ABS)
@@ -954,6 +1021,7 @@ namespace emu6502test
 			Assert::AreEqual(0xC8, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(EOR_ABSX)
@@ -965,6 +1033,7 @@ namespace emu6502test
 			Assert::AreEqual(0xC1, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(EOR_ABSY)
@@ -976,6 +1045,7 @@ namespace emu6502test
 			Assert::AreEqual(0x1C, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(EOR_ZPG)
@@ -987,6 +1057,7 @@ namespace emu6502test
 			Assert::AreEqual(0xA5, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(EOR_ZPGX)
@@ -998,6 +1069,7 @@ namespace emu6502test
 			Assert::AreEqual(0x55, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(EOR_XIND)
@@ -1010,6 +1082,7 @@ namespace emu6502test
 			Assert::AreEqual(0xAA, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(EOR_INDY)
@@ -1022,6 +1095,7 @@ namespace emu6502test
 			Assert::AreEqual(0x55, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -1046,6 +1120,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ASL_ABS)
@@ -1058,6 +1133,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ASL_ABSX)
@@ -1070,6 +1146,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ASL_ZPG)
@@ -1082,6 +1159,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ASL_ZPGX)
@@ -1094,6 +1172,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LSR_A)
@@ -1105,6 +1184,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LSR_ABS)
@@ -1117,6 +1197,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LSR_ABSX)
@@ -1129,6 +1210,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LSR_ZPG)
@@ -1141,6 +1223,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(LSR_ZPGX)
@@ -1153,6 +1236,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -1177,6 +1261,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROL_ABS)
@@ -1189,6 +1274,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROL_ABSX)
@@ -1201,6 +1287,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROL_ZPG)
@@ -1213,6 +1300,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROL_ZPGX)
@@ -1225,6 +1313,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROR_A)
@@ -1236,6 +1325,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROR_ABS)
@@ -1248,6 +1338,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROR_ABSX)
@@ -1260,6 +1351,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(true);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROR_ZPG)
@@ -1272,6 +1364,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ROR_ZPGX)
@@ -1284,6 +1377,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertNegative(false);
 			AssertZero(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -1307,6 +1401,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CMP_ABS)
@@ -1318,6 +1413,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CMP_ABSX)
@@ -1329,6 +1425,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertZero(true);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CMP_ABSY)
@@ -1340,6 +1437,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CMP_ZPG)
@@ -1351,6 +1449,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CMP_ZPGX)
@@ -1362,6 +1461,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertZero(true);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CMP_XIND)
@@ -1374,6 +1474,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CMP_INDY)
@@ -1386,6 +1487,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CPX_IMM)
@@ -1396,6 +1498,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CPX_ABS)
@@ -1407,6 +1510,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CPX_ZPG)
@@ -1418,6 +1522,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CPY_IMM)
@@ -1428,6 +1533,7 @@ namespace emu6502test
 			AssertCarry(true);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CPY_ABS)
@@ -1439,6 +1545,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(CPY_ZPG)
@@ -1450,6 +1557,7 @@ namespace emu6502test
 			AssertCarry(false);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -1474,6 +1582,7 @@ namespace emu6502test
 			Assert::AreEqual(0x31, (int)RAM[0x2000]);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(INC_ABSX)
@@ -1485,6 +1594,7 @@ namespace emu6502test
 			Assert::AreEqual(0x00, (int)RAM[0x3050]);
 			AssertZero(true);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(INC_ZPG)
@@ -1496,6 +1606,7 @@ namespace emu6502test
 			Assert::AreEqual(0x80, (int)RAM[0x0020]);
 			AssertZero(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(INC_ZPGX)
@@ -1507,6 +1618,7 @@ namespace emu6502test
 			Assert::AreEqual(0xFF, (int)RAM[0x0080]);
 			AssertZero(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(INX)
@@ -1517,6 +1629,7 @@ namespace emu6502test
 			Assert::AreEqual(0x10, (int)CPU->X);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(INY)
@@ -1527,6 +1640,7 @@ namespace emu6502test
 			Assert::AreEqual(0x00, (int)CPU->Y);
 			AssertZero(true);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -1551,6 +1665,7 @@ namespace emu6502test
 			Assert::AreEqual(0x2F, (int)RAM[0x2000]);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(DEC_ABSX)
@@ -1562,6 +1677,7 @@ namespace emu6502test
 			Assert::AreEqual(0xFF, (int)RAM[0x3050]);
 			AssertZero(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(DEC_ZPG)
@@ -1573,6 +1689,7 @@ namespace emu6502test
 			Assert::AreEqual(0x7F, (int)RAM[0x0020]);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(DEC_ZPGX)
@@ -1584,6 +1701,7 @@ namespace emu6502test
 			Assert::AreEqual(0xFE, (int)RAM[0x0080]);
 			AssertZero(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(DEX)
@@ -1594,6 +1712,7 @@ namespace emu6502test
 			Assert::AreEqual(0x0E, (int)CPU->X);
 			AssertZero(false);
 			AssertNegative(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(DEY)
@@ -1604,6 +1723,7 @@ namespace emu6502test
 			Assert::AreEqual(0xFF, (int)CPU->Y);
 			AssertZero(false);
 			AssertNegative(true);
+			AssertFlagsUnchanged();
 		}
 	};
 
@@ -1629,6 +1749,7 @@ namespace emu6502test
 			AssertNegative(false);
 			AssertZero(false);
 			AssertOverflow(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ADC_ABS)
@@ -1642,6 +1763,7 @@ namespace emu6502test
 			AssertNegative(true);
 			AssertZero(false);
 			AssertOverflow(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ADC_ABSX)
@@ -1655,6 +1777,7 @@ namespace emu6502test
 			AssertZero(true);
 			AssertCarry(true);
 			AssertOverflow(true);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ADC_ABSY)
@@ -1668,6 +1791,7 @@ namespace emu6502test
 			AssertZero(true);
 			AssertCarry(true);
 			AssertOverflow(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ADC_ZPG)
@@ -1681,6 +1805,7 @@ namespace emu6502test
 			AssertZero(false);
 			AssertCarry(false);
 			AssertOverflow(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ADC_ZPGX)
@@ -1694,6 +1819,7 @@ namespace emu6502test
 			AssertZero(false);
 			AssertCarry(true);
 			AssertOverflow(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ADC_XIND)
@@ -1708,6 +1834,7 @@ namespace emu6502test
 			AssertZero(false);
 			AssertCarry(false);
 			AssertOverflow(false);
+			AssertFlagsUnchanged();
 		}
 
 		TEST_METHOD(ADC_INDY)
@@ -1722,6 +1849,133 @@ namespace emu6502test
 			AssertZero(false);
 			AssertCarry(false);
 			AssertOverflow(true);
+			AssertFlagsUnchanged();
+		}
+	};
+
+	TEST_CLASS(Subtract)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(SBC_IMM)
+		{
+			_write("A9 01 28 E9 01");
+			CPU->Run();
+			AssertLastInstruction("SBC", sImmediate);
+			Assert::AreEqual(0xFF, (int)CPU->A);
+			AssertCarry(true);
+			AssertNegative(true);
+			AssertZero(false);
+			AssertOverflow(false);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(SBC_ABS)
+		{
+			_write("A9 FF 28 38 ED 00 20");
+			_write(0x2000, "FF");
+			CPU->Run();
+			AssertLastInstruction("SBC", sAbsolute);
+			Assert::AreEqual(0x00, (int)CPU->A);
+			AssertCarry(false);
+			AssertNegative(false);
+			AssertZero(true);
+			AssertOverflow(false);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(SBC_ABSX)
+		{
+			_write("A9 80 A2 10 28 FD 00 20");
+			_write(0x2010, "7F");
+			CPU->Run();
+			AssertLastInstruction("SBC", sAbsoluteX);
+			Assert::AreEqual(0x00, (int)CPU->A);
+			AssertNegative(false);
+			AssertZero(true);
+			AssertCarry(false);
+			AssertOverflow(true);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(SBC_ABSY)
+		{
+			_write("A9 0A A0 20 38 F9 00 20");
+			_write(0x2020, "F6");
+			CPU->Run();
+			AssertLastInstruction("SBC", sAbsoluteY);
+			Assert::AreEqual(0x14, (int)CPU->A);
+			AssertNegative(false);
+			AssertZero(false);
+			AssertCarry(true);
+			AssertOverflow(false);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(SBC_ZPG)
+		{
+			_write("A9 20 28 E5 48");
+			_write(0x0048, "40");
+			CPU->Run();
+			AssertLastInstruction("SBC", sZeroPage);
+			Assert::AreEqual(0xDF, (int)CPU->A);
+			AssertNegative(true);
+			AssertZero(false);
+			AssertCarry(true);
+			AssertOverflow(false);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(SBC_ZPGX)
+		{
+			_write("A9 F6 A2 10 38 F5 58");
+			_write(0x0068, "F6");
+			CPU->Run();
+			AssertLastInstruction("SBC", sZeroPageX);
+			Assert::AreEqual(0x00, (int)CPU->A);
+			AssertNegative(false);
+			AssertZero(true);
+			AssertCarry(false);
+			AssertOverflow(false);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(SBC_XIND)
+		{
+			_write("A9 0F A2 30 28 38 E1 70");
+			_write(0x00A0, "10 20");
+			_write(0x2010, "1F");
+			CPU->Run();
+			AssertLastInstruction("SBC", sXIndirect);
+			Assert::AreEqual(0xF0, (int)CPU->A);
+			AssertNegative(true);
+			AssertZero(false);
+			AssertCarry(true);
+			AssertOverflow(false);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(SBC_INDY)
+		{
+			_write("A9 7F A0 18 28 38 F1 35");
+			_write(0x0035, "10 20");
+			_write(0x2028, "80");
+			CPU->Run();
+			AssertLastInstruction("SBC", sIndirectY);
+			Assert::AreEqual(0xFF, (int)CPU->A);
+			AssertNegative(true);
+			AssertZero(false);
+			AssertCarry(true);
+			AssertOverflow(true);
+			AssertFlagsUnchanged();
 		}
 	};
 }
