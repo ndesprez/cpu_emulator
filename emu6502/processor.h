@@ -1,3 +1,21 @@
+/*
+CPU emulator (https://github.com/ndesprez/cpu_emulator)
+Copyright(C) 2021 Nicolas Desprez
+
+This program is free software : you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.If not, see < http://www.gnu.org/licenses/>.
+*/
+
 #pragma once
 
 #include <string.h>
@@ -5,35 +23,35 @@
 using byte = unsigned char;
 using word = unsigned short;
 
-// TODO: add a namespace ?
+// TODO: add a namespace?
 
 // equivalent to addressing modes plus extra for transfer instructions
 enum SourceType {
-	sAccumulator,
-	sIndexX,
-	sIndexY,
-	sStackPointer,
-	sAbsolute,
-	sAbsoluteX,
-	sAbsoluteY,
-	sImmediate,
-	sImplied,
-	sIndirect,
-	sXIndirect,
-	sIndirectY,
-	sZeroPage,
-	sZeroPageX,
-	sZeroPageY
+	sAccumulator,	// TAX, TAY
+	sIndexX,		// TXA, TXS
+	sIndexY,		// TYA
+	sStackPointer,	// TSX
+	sAbsolute,		// LDA $1234
+	sAbsoluteX,		// LDA $1234, X
+	sAbsoluteY,		// LDA $1234, Y
+	sImmediate,		// LDA #$12
+	sImplied,		// BRK, INX, CLC, ASL A, etc.
+	sIndirect,		// JMP ($1234)
+	sXIndirect,		// LDA ($12), X
+	sIndirectY,		// LDA ($12, Y)
+	sZeroPage,		// LDA $12
+	sZeroPageX,		// LDA $12, X
+	sZeroPageY		// LDA $12, Y
 };
 
 enum TargetType {
-	tNone,
-	tAccumulator,
-	tIndexX,
-	tIndexY,
-	tStackPointer,
-	tStatus,
-	tAddress
+	tNone,			// paired with sImplied, branch and jump instructions
+	tAccumulator,	// AND, CMP, ADC, etc.
+	tIndexX,		// CPX, TAX, LDX, etc.
+	tIndexY,		// STY, TAY, LDY, etc.
+	tStackPointer,	// TAS
+	tStatus,		// PHP, PLP
+	tAddress		// LSR, ROL, INC, etc.
 };
 
 class Processor
@@ -229,9 +247,9 @@ protected:
 	byte	OpCode;			// instruction register
 	word	Address;		// address register
 
-	bool ResetState;
-	bool InterruptState;
-	bool NonMaskableInterruptState;
+	bool ResetState;				// true if SendRST() was called
+	bool InterruptState;			// true if SendIRQ() was called
+	bool NonMaskableInterruptState;	// true if SendNMI() was called
 	
 #pragma region internal functions
 	bool SignBit(byte Value)
