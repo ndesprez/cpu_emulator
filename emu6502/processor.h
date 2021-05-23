@@ -109,7 +109,7 @@ protected:
 		{0x90, "BCC",	sImmediate,		tNone,			&Processor::BranchIfCarryClear},
 		{0xB0, "BCS",	sImmediate,		tNone,			&Processor::BranchIfCarrySet},
 		{0xF0, "BEQ",	sImmediate,		tNone,			&Processor::BranchIfEqual},
-		{0x24, "BIT",	sZeroPage,		tNone,			&Processor::BitTest},
+		{0x24, "BIT",	sZeroPage,		tAddress,		&Processor::BitTest},
 		{0x2C, "BIT",	sAbsolute,		tAddress,		&Processor::BitTest},
 		{0x30, "BMI",	sImmediate,		tNone,			&Processor::BranchIfMinus},
 		{0xD0, "BNE",	sImmediate,		tNone,			&Processor::BranchIfNotEqual},
@@ -239,7 +239,7 @@ protected:
 	};
 
 	const Instruction*	InstructionSet[256] = {};
-	const Instruction* LastInstruction;
+	const Instruction*	LastInstruction;
 
 	byte	*Memory;		// 64kb of RAM (hopefully)
 	byte	*Source;		// instruction source
@@ -348,7 +348,7 @@ protected:
 	{
 		WriteFlag(fCarry, (*Target >= *Source));
 		WriteFlag(fZero, (*Target == *Source));
-		// TODO : code a better byte subtraction if necessary
+		// TODO: code a better byte subtraction if necessary
 		WriteFlag(fNegative, SignBit(*Target - *Source));
 	}
 
@@ -414,7 +414,7 @@ protected:
 
 	void AddWithCarry()
 	{
-		// TODO : implement BCD addition
+		// TODO: implement BCD addition
 		word result = *Target + *Source + ReadFlag(fCarry);
 
 		// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
@@ -426,7 +426,7 @@ protected:
 
 	void SubtractWithCarry()
 	{
-		// TODO : implement BCD subtraction
+		// TODO: implement BCD subtraction
 		word result = *Target + ~*Source + ReadFlag(fCarry);
 
 		WriteFlag(fOverflow, (~*Source ^ result) & (*Target ^ result) & 0x80);
@@ -435,6 +435,7 @@ protected:
 		WriteTargetFlags();
 	}
 
+	// TODO: write a generic internal byte push
 	void Push()
 	{
 		Memory[Add((word)0x100, S--)] = *Target;
@@ -442,15 +443,16 @@ protected:
 
 	void PushAddress(word Address)
 	{
-		Memory[S--] = Address >> 8;
-		Memory[S--] = Address & 0xFF;
+		Memory[Add((word)0x100, S--)] = Address >> 8;
+		Memory[Add((word)0x100, S--)] = Address & 0xFF;
 	}
 
 	void PullAddress(word &Address)
 	{
-		Address = Memory[++S] | (Memory[++S] << 8);
+		Address = Memory[Add((word)0x100, ++S)] | (Memory[Add((word)0x100, ++S)] << 8);
 	}
 
+	// TODO: write a generic internal byte pull
 	void Pull()
 	{
 		*Target = Memory[Add((word)0x100, ++S)];
@@ -469,13 +471,14 @@ protected:
 
 	void Call()
 	{
-		PushAddress(PC);
+		PushAddress(PC - 1);
 		Jump();
 	}
 
 	void Return()
 	{
 		PullAddress(PC);
+		PC++;
 	}
 
 	void Break()
@@ -483,7 +486,7 @@ protected:
 		if (!EndOnBreak)
 		{
 			PushAddress(PC);
-			Memory[S--] = P | fBreak;
+			Memory[Add((word)0x100, S--)] = P | fBreak;
 			PC = ReadAddress(InterruptVector);
 		}
 	}
@@ -597,7 +600,7 @@ protected:
 	{
 		InterruptState = false;
 		PushAddress(PC);
-		Memory[S--] = P & ~fBreak;
+		Memory[Add((word)0x100, S--)] = P & ~fBreak;
 		WriteFlag(fInterrupt, true);
 		PC = ReadAddress(InterruptVector);
 	}
@@ -606,14 +609,14 @@ protected:
 	{
 		NonMaskableInterruptState = false;
 		PushAddress(PC);
-		Memory[S--] = P;
+		Memory[Add((word)0x100, S--)] = P;
 		WriteFlag(fInterrupt, true);
 		PC = ReadAddress(NonMaskableInterruptVector);
 	}
 
 	void ReturnFromInterrupt()
 	{
-		P = Memory[++S];
+		P = Memory[Add((word)0x100, ++S)];
 		Return();
 	}
 
@@ -623,7 +626,7 @@ protected:
 	{
 		ReadOpCode();
 
-		// TODO : handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
+		// TODO: handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
 		const Instruction *in = InstructionSet[OpCode];
 
 		if (OpCode != BreakOpCode)
@@ -664,7 +667,13 @@ protected:
 			break;
 		case sIndirect:
 			ReadAddressAtPC();
-			ReadAddress(Address);
+
+			// JMP ($xxFF) bug (luckily the only instruction to use indirect mode)
+			if ((Address & 0xFF) == 0xFF)
+				Address = Memory[Address] | (Memory[Address & 0xFF00] << 8);
+			else
+				ReadAddress(Address);
+
 			Source = &Memory[Address];
 			break;
 		case sXIndirect:
@@ -694,6 +703,7 @@ protected:
 			break;
 		}
 
+		// TODO: this can be set in the LegalInstructionSet array initialisation
 		switch (in->Target)
 		{
 		case tNone:
@@ -721,6 +731,7 @@ protected:
 			// unknown target ?
 			break;
 		}
+
 		(this->*in->Function)();
 	}
 			

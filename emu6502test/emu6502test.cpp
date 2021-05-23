@@ -2076,4 +2076,117 @@ namespace emu6502test
 			AssertFlagsUnchanged();
 		}
 	};
+
+	TEST_CLASS(Bit)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(BIT_ABS)
+		{
+			_write("A9 05 2C 00 20");
+			_write(0x2000, "FA");
+			CPU->Run();
+			AssertLastInstruction("BIT", sAbsolute);
+			AssertZero(true);
+			AssertOverflow(true);
+			AssertNegative(true);
+		}
+
+		TEST_METHOD(BIT_ZPG)
+		{
+			_write("A9 F8 24 20");
+			_write(0x0020, "0F");
+			CPU->Run();
+			AssertLastInstruction("BIT", sZeroPage);
+			AssertZero(false);
+			AssertOverflow(false);
+			AssertNegative(false);
+		}
+	};
+
+	TEST_CLASS(Other)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize();
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(NOP)
+		{
+			_write("EA");
+			CPU->Run();
+			AssertLastInstruction("NOP");
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(JMP_ABS)
+		{
+			_write("4C 00 40");
+			_write(0x4000, "00");
+			CPU->Run();
+			AssertLastInstruction("JMP", sAbsolute);
+			Assert::AreEqual(0x4000, CPU->PC - 1);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(JMP_IND)
+		{
+			_write("6C 00 40");
+			_write(0x4000, "00 50");
+			_write(0x5000, "00");
+			CPU->Run();
+			AssertLastInstruction("JMP", sIndirect);
+			Assert::AreEqual(0x5000, CPU->PC - 1);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(JMP_IND_BUG)
+		{
+			// instead of reading 0x50 at 0x4000, JMP (0x3FFF) reads 0x60 at 0x3FF00
+			_write("6C FF 3F");
+			_write(0x3FFF, "00 50");
+			_write(0x3F00, "60");
+			_write(0x6000, "00");
+			CPU->Run();
+			AssertLastInstruction("JMP", sIndirect);
+			Assert::AreEqual(0x6000, CPU->PC - 1);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(JSR)
+		{
+			_write("20 00 30");
+			_write(0x3000, "00");
+			CPU->Run();
+			AssertLastInstruction("JSR");
+			Assert::AreEqual(0x3000, CPU->PC - 1);
+			// checks PC on the stack
+			Assert::AreEqual(0x03, (int)RAM[(word)CPU->S + 0x100 + 1]);
+			Assert::AreEqual(0x10, (int)RAM[(word)CPU->S + 0x100 + 2]);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(RTS)
+		{
+			_write("20 00 30");
+			_write(0x3000, "60");
+			CPU->Run();
+			AssertLastInstruction("RTS");
+			Assert::AreEqual(0x1004, CPU->PC - 1);
+			AssertFlagsUnchanged();
+		}
+	};
 }
