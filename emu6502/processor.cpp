@@ -196,6 +196,16 @@ void Processor::ReadAddressAtPC()
 	PC += 2;
 }
 
+void Processor::Push(byte Data)
+{
+	Memory[Add((word)0x100, S--)] = Data;
+}
+
+byte Processor::PullByte()
+{
+	return Memory[Add((word)0x100, ++S)];
+}
+
 bool Processor::ReadFlag(Flags Flag)
 {
 	return P & Flag;
@@ -213,6 +223,34 @@ void Processor::WriteTargetFlags()
 {
 	WriteFlag(fZero, (*Target == 0));
 	WriteFlag(fNegative, SignBit(*Target));
+}
+
+// AddWithCarry(byte) avoids the duplication of code between ADC and SBC
+void Processor::AddWithCarry(byte Value, byte Carry)
+{
+	word result;
+	if (FlagDecimal())
+	{
+		byte lo_nibble = (Value & 0x0F) + (*Target & 0x0F) + Carry;
+		byte hi_nibble = (Value & 0xF0) + (*Target & 0xF0);
+
+		if (lo_nibble >= 0x0A)
+			lo_nibble += 0x06;
+
+		result = lo_nibble + hi_nibble;
+
+		if (result >= 0xA0)
+			result += 0x60;
+	}
+	else
+	{
+		result = *Target + Value + ReadFlag(fCarry);
+	}
+	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
+	WriteFlag(fOverflow, (Value ^ result) & (*Target ^ result) & 0x80);
+	*Target = result & 0xFF;
+	WriteFlag(fCarry, result & 0x100);
+	WriteTargetFlags();
 }
 
 #pragma endregion
@@ -299,48 +337,33 @@ void Processor::Decrement()
 
 void Processor::AddWithCarry()
 {
-	// TODO: implement BCD addition
-	word result = *Target + *Source + ReadFlag(fCarry);
-
-	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
-	WriteFlag(fOverflow, (*Source ^ result) & (*Target ^ result) & 0x80);
-	*Target = result & 0xFF;
-	WriteFlag(fCarry, result & 0x100);
-	WriteTargetFlags();
+	AddWithCarry(*Source, ReadFlag(fCarry));
 }
 
 void Processor::SubtractWithCarry()
 {
-	// TODO: implement BCD subtraction
-	word result = *Target + ~*Source + ReadFlag(fCarry);
-
-	WriteFlag(fOverflow, (~*Source ^ result) & (*Target ^ result) & 0x80);
-	*Target = result & 0xFF;
-	WriteFlag(fCarry, result & 0x100);
-	WriteTargetFlags();
+	AddWithCarry(~*Source, -1 + ReadFlag(fCarry));
 }
 
-// TODO: write a generic internal byte push
 void Processor::Push()
 {
-	Memory[Add((word)0x100, S--)] = *Target;
+	Push(*Target);
 }
 
 void Processor::PushAddress(word Address)
 {
-	Memory[Add((word)0x100, S--)] = Address >> 8;
-	Memory[Add((word)0x100, S--)] = Address & 0xFF;
+	Push(Address >> 8);
+	Push(Address & 0xFF);
 }
 
 void Processor::PullAddress(word &Address)
 {
-	Address = Memory[Add((word)0x100, ++S)] | (Memory[Add((word)0x100, ++S)] << 8);
+	Address = PullByte() | (PullByte() << 8);
 }
 
-// TODO: write a generic internal byte pull
 void Processor::Pull()
 {
-	*Target = Memory[Add((word)0x100, ++S)];
+	*Target = PullByte();
 }
 
 void Processor::Branch()
@@ -371,7 +394,7 @@ void Processor::Break()
 	if (!EndOnBreak)
 	{
 		PushAddress(PC);
-		Memory[Add((word)0x100, S--)] = P | fBreak;
+		Push(P | fBreak);
 		PC = ReadAddress(InterruptVector);
 	}
 }
@@ -485,7 +508,7 @@ void Processor::Interrupt()
 {
 	InterruptState = false;
 	PushAddress(PC);
-	Memory[Add((word)0x100, S--)] = P & ~fBreak;
+	Push(P & ~fBreak);
 	WriteFlag(fInterrupt, true);
 	PC = ReadAddress(InterruptVector);
 }
@@ -494,14 +517,14 @@ void Processor::NonMaskableInterrupt()
 {
 	NonMaskableInterruptState = false;
 	PushAddress(PC);
-	Memory[Add((word)0x100, S--)] = P;
+	Push(P);
 	WriteFlag(fInterrupt, true);
 	PC = ReadAddress(NonMaskableInterruptVector);
 }
 
 void Processor::ReturnFromInterrupt()
 {
-	P = Memory[Add((word)0x100, ++S)];
+	P = PullByte();
 	Return();
 }
 

@@ -27,14 +27,14 @@ using word = unsigned short;
 
 // status register flags
 enum Flags : byte {
-	fCarry = 1,
-	fZero = 2,
-	fInterrupt = 4,
-	fDecimal = 8,
-	fBreak = 16,	// always set to 1
+	fCarry		= 1,
+	fZero		= 2,
+	fInterrupt	= 4,
+	fDecimal	= 8,
+	fBreak		= 16,	// always set to 1
 	// status bit 5 is always set to 1
-	fOverflow = 64,
-	fNegative = 128
+	fOverflow	= 64,
+	fNegative	= 128
 };
 
 // equivalent to addressing modes plus extra for transfer instructions
@@ -263,9 +263,12 @@ protected:
 	word ReadAddress(word Address);
 	void WriteAddress(word Address);
 	void ReadAddressAtPC();
+	void Push(byte Data);
+	byte PullByte();
 	bool ReadFlag(Flags Flag);
 	void WriteFlag(Flags Flag, bool Value);
 	void WriteTargetFlags();
+	void AddWithCarry(byte Value, byte Carry);
 #pragma endregion
 
 #pragma region instructions
@@ -309,12 +312,11 @@ protected:
 	void SetDecimalFlag();
 	void SetInterruptFlag();
 	void BitTest();
-
+#pragma endregion
 	void Reset();
 	void Interrupt();
 	void NonMaskableInterrupt();
 	void ReturnFromInterrupt();
-#pragma endregion
 
 	void ExecuteInstruction();
 			
