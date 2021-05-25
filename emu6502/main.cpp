@@ -18,9 +18,6 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #include "processor.h"
 
-Processor *CPU;
-byte	  *RAM;
-
 int main(void)
 {
 	return 0;
