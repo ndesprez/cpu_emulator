@@ -18,10 +18,8 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include <string.h>
-
-using byte = unsigned char;
-using word = unsigned short;
+#include "types.h"
+#include "memory.h"
 
 // TODO: add a namespace?
 
@@ -238,10 +236,10 @@ protected:
 		{0x98, "TYA",	sIndexY,		tAccumulator,	&Processor::Load}
 	};
 
-	const Instruction*	InstructionSet[256] = {};
-	const Instruction*	LastInstruction;
+	const Instruction	*InstructionSet[256] = {};
+	const Instruction	*LastInstruction;
 
-	byte	*Memory;		// 64kb of RAM (hopefully)
+	Memory	&RAM;		// 64kb of RAM (hopefully)
 	byte	*Source;		// instruction source
 	byte	*Target;		// instruction target
 	byte	Data;			// data register
@@ -327,7 +325,7 @@ public:
 	byte	P;		// status flags
 	bool	EndOnBreak;
 
-	Processor(byte *Array);
+	Processor(Memory *RAM);
 	bool FlagCarry();
 	bool FlagZero();
 	bool FlagInterrupt();

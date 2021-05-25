@@ -16,11 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
+#include <string.h>
 #include "processor.h"
 
-Processor::Processor(byte *Array)
+Processor::Processor(Memory *RAM) : RAM(*RAM)
 {
-	Memory = Array;
 	Source = nullptr;
 	Target = nullptr;
 	Data = 0;
@@ -155,19 +155,19 @@ byte Processor::Add(byte A, byte B)
 
 byte Processor::ReadData(word Address)
 {
-	Data = Memory[Address];
+	Data = RAM[Address];
 
 	return Data;
 }
 
 void Processor::WriteData(word Address)
 {
-	Memory[Address] = Data;
+	RAM[Address] = Data;
 }
 
 byte Processor::ReadOpCode()
 {
-	OpCode = Memory[PC++];
+	OpCode = RAM[PC++];
 
 	return OpCode;
 }
@@ -179,15 +179,15 @@ void Processor::ReadDataAtPC()
 
 word Processor::ReadAddress(word Address)
 {
-	this->Address = Memory[Address] | (Memory[Add(Address, 1)] << 8);
+	this->Address = RAM[Address] | (RAM[Add(Address, 1)] << 8);
 
 	return this->Address;
 }
 
 void Processor::WriteAddress(word Address)
 {
-	Memory[Address] = this->Address & 0xFF;
-	Memory[Add(Address, 1)] = this->Address >> 8;
+	RAM[Address] = this->Address & 0xFF;
+	RAM[Add(Address, 1)] = this->Address >> 8;
 }
 
 void Processor::ReadAddressAtPC()
@@ -198,12 +198,12 @@ void Processor::ReadAddressAtPC()
 
 void Processor::Push(byte Data)
 {
-	Memory[Add((word)0x100, S--)] = Data;
+	RAM[Add((word)0x100, S--)] = Data;
 }
 
 byte Processor::PullByte()
 {
-	return Memory[Add((word)0x100, ++S)];
+	return RAM[Add((word)0x100, ++S)];
 }
 
 bool Processor::ReadFlag(Flags Flag)
@@ -393,7 +393,7 @@ void Processor::Branch()
 
 void Processor::Jump()
 {
-	// this avoids PC = &Memory[Address] in absolute and indirect modes
+	// this avoids PC = &RAM[Address] in absolute and indirect modes
 	PC = Address;
 }
 
@@ -579,15 +579,15 @@ void Processor::ExecuteInstruction()
 		break;
 	case sAbsolute:
 		ReadAddressAtPC();
-		Source = &Memory[Address];
+		Source = &RAM[Address];
 		break;
 	case sAbsoluteX:
 		ReadAddressAtPC();
-		Source = &Memory[Add(Address, X)];
+		Source = &RAM[Add(Address, X)];
 		break;
 	case sAbsoluteY:
 		ReadAddressAtPC();
-		Source = &Memory[Add(Address, Y)];
+		Source = &RAM[Add(Address, Y)];
 		break;
 	case sImmediate:
 		ReadDataAtPC();
@@ -598,33 +598,33 @@ void Processor::ExecuteInstruction()
 
 		// JMP ($xxFF) bug (luckily the only instruction to use indirect mode)
 		if ((Address & 0xFF) == 0xFF)
-			Address = Memory[Address] | (Memory[Address & 0xFF00] << 8);
+			Address = RAM[Address] | (RAM[Address & 0xFF00] << 8);
 		else
 			ReadAddress(Address);
 
-		Source = &Memory[Address];
+		Source = &RAM[Address];
 		break;
 	case sXIndirect:
 		ReadDataAtPC();
 		ReadAddress(Add(Data, X));
-		Source = &Memory[Address];
+		Source = &RAM[Address];
 		break;
 	case sIndirectY:
 		ReadDataAtPC();
 		ReadAddress(Data);
-		Source = &Memory[Add(Address, Y)];
+		Source = &RAM[Add(Address, Y)];
 		break;
 	case sZeroPage:
 		ReadDataAtPC();
-		Source = &Memory[Data];
+		Source = &RAM[Data];
 		break;
 	case sZeroPageX:
 		ReadDataAtPC();
-		Source = &Memory[Add(Data, X)];
+		Source = &RAM[Add(Data, X)];
 		break;
 	case sZeroPageY:
 		ReadDataAtPC();
-		Source = &Memory[Add(Data, Y)];
+		Source = &RAM[Add(Data, Y)];
 		break;
 	default:
 		// unknown addressing mode ?
