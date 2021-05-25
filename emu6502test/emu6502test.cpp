@@ -1885,7 +1885,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("SBC", sImmediate);
 			Assert::AreEqual(0xFF, (int)CPU->A);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertNegative(true);
 			AssertZero(false);
 			AssertOverflow(false);
@@ -1899,7 +1899,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("SBC", sAbsolute);
 			Assert::AreEqual(0x00, (int)CPU->A);
-			AssertCarry(true);
+			AssertCarry(false);
 			AssertNegative(false);
 			AssertZero(true);
 			AssertOverflow(false);
@@ -1915,7 +1915,7 @@ namespace emu6502test
 			Assert::AreEqual(0x00, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(true);
-			AssertCarry(true);
+			AssertCarry(false);
 			AssertOverflow(true);
 			AssertFlagsUnchanged();
 		}
@@ -1929,7 +1929,7 @@ namespace emu6502test
 			Assert::AreEqual(0x14, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
@@ -1943,7 +1943,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDF, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
@@ -1957,7 +1957,7 @@ namespace emu6502test
 			Assert::AreEqual(0x00, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(true);
-			AssertCarry(true);
+			AssertCarry(false);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
@@ -1972,7 +1972,7 @@ namespace emu6502test
 			Assert::AreEqual(0xF0, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
@@ -1987,8 +1987,22 @@ namespace emu6502test
 			Assert::AreEqual(0xFF, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertOverflow(true);
+			AssertFlagsUnchanged();
+		}
+
+		TEST_METHOD(SBC_IMM_BCD)
+		{
+			_write("F8 A9 41 38 E9 36");
+			CPU->Run();
+			AssertLastInstruction("SBC", sImmediate);
+			Assert::AreEqual(0x05, (int)CPU->A);
+			AssertCarry(false);
+			AssertNegative(false);
+			AssertZero(false);
+			AssertDecimal(true);
+			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
 	};

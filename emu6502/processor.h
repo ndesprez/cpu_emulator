@@ -268,7 +268,6 @@ protected:
 	bool ReadFlag(Flags Flag);
 	void WriteFlag(Flags Flag, bool Value);
 	void WriteTargetFlags();
-	void AddWithCarry(byte Value, byte Carry);
 #pragma endregion
 
 #pragma region instructions

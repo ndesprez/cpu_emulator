@@ -225,34 +225,6 @@ void Processor::WriteTargetFlags()
 	WriteFlag(fNegative, SignBit(*Target));
 }
 
-// AddWithCarry(byte) avoids the duplication of code between ADC and SBC
-void Processor::AddWithCarry(byte Value, byte Carry)
-{
-	word result;
-	if (FlagDecimal())
-	{
-		byte lo_nibble = (Value & 0x0F) + (*Target & 0x0F) + Carry;
-		byte hi_nibble = (Value & 0xF0) + (*Target & 0xF0);
-
-		if (lo_nibble >= 0x0A)
-			lo_nibble += 0x06;
-
-		result = lo_nibble + hi_nibble;
-
-		if (result >= 0xA0)
-			result += 0x60;
-	}
-	else
-	{
-		result = *Target + Value + ReadFlag(fCarry);
-	}
-	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
-	WriteFlag(fOverflow, (Value ^ result) & (*Target ^ result) & 0x80);
-	*Target = result & 0xFF;
-	WriteFlag(fCarry, result & 0x100);
-	WriteTargetFlags();
-}
-
 #pragma endregion
 
 #pragma region instructions
@@ -337,12 +309,60 @@ void Processor::Decrement()
 
 void Processor::AddWithCarry()
 {
-	AddWithCarry(*Source, ReadFlag(fCarry));
+	word result;
+	if (FlagDecimal())
+	{
+		byte lo_nibble = (*Source & 0x0F) + (*Target & 0x0F) + ReadFlag(fCarry);
+		byte hi_nibble = (*Source & 0xF0) + (*Target & 0xF0);
+
+		if (lo_nibble >= 0x0A)
+			lo_nibble += 0x06;
+
+		result = lo_nibble + hi_nibble;
+
+		if (result >= 0xA0)
+			result += 0x60;
+	}
+	else
+	{
+		result = *Target + *Source + ReadFlag(fCarry);
+	}
+	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
+	WriteFlag(fOverflow, (*Source ^ result) & (*Target ^ result) & 0x80);
+	*Target = result & 0xFF;
+	WriteFlag(fCarry, result & 0x100);
+	WriteTargetFlags();
 }
 
 void Processor::SubtractWithCarry()
 {
-	AddWithCarry(~*Source, -1 + ReadFlag(fCarry));
+	word result;
+
+	if (FlagDecimal())
+	{
+		byte lo_nibble = (*Target & 0x0F) - (*Source & 0x0F) - 1 + ReadFlag(fCarry);
+		byte hi_nibble = (*Target & 0xF0) - (*Source & 0xF0);
+
+		if (lo_nibble >= 0x0A)
+		{
+			lo_nibble -= 0x06;
+			hi_nibble -= 0x10;
+		}
+
+		result = (lo_nibble & 0x0F) + hi_nibble;
+
+		if (result >= 0xA0)
+			result -= 0x60;
+	}
+	else
+	{
+		result = *Target - *Source - 1 + ReadFlag(fCarry);
+	}
+	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
+	WriteFlag(fOverflow, ~(*Source ^ result) & (*Target ^ result) & 0x80);
+	*Target = result & 0xFF;
+	WriteFlag(fCarry, result & 0x100);
+	WriteTargetFlags();
 }
 
 void Processor::Push()
