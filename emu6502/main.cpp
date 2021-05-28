@@ -16,9 +16,55 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
+#include <iostream>
+#include <bitset>
 #include "processor.h"
 
-int main(void)
+using namespace std;
+
+int main(int argc, char **argv)
 {
+	if (argc == 2)
+	{
+		Memory *RAM = new Memory();
+
+		Processor *CPU = new Processor(RAM);
+		CPU->EndOnBreak = false;
+		CPU->SendRST();
+		CPU->Step();
+		CPU->PC = 0x400;
+
+		if (RAM->ReadFile(argv[1]))
+		{
+			word previous_pc;
+			do
+			{
+				previous_pc = CPU->PC;
+				CPU->Step();
+			} while (previous_pc != CPU->PC);
+
+			char *buffer = new char[16 * 3 + 1];
+			cout << RAM->Read(buffer, CPU->PC - 30, 16) << endl;
+			cout << RAM->Read(buffer, CPU->PC - 14, 16) << endl << endl;
+			cout << RAM->Read(buffer, 0x1F0, 16) << endl << endl;
+			delete[] buffer;
+
+			cout << "A  = " << uppercase << hex << (int)CPU->A << endl;
+			cout << "X  = " << (int)CPU->X << endl;
+			cout << "Y  = " << (int)CPU->Y << endl;
+			cout << "S  = " << (int)CPU->S << endl;
+			cout << "PC = " << (int)CPU->PC << endl;
+			cout << "     NO-BDIZC" << endl;
+			cout << "P  = " << bitset<8>(CPU->P) << endl;
+		}
+		else
+		{
+			cout << "Cannot open file \"" << argv[1] << "\"" << endl;
+		}
+	}
+	else
+	{
+		cout << "Missing argument" << endl;
+	}
 	return 0;
 }

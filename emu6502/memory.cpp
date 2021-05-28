@@ -17,8 +17,11 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
 #include <assert.h>
+#include <fstream>
 #include <ctype.h>
 #include "memory.h"
+
+using namespace std;
 
 Memory::Memory(void)
 {
@@ -39,6 +42,22 @@ byte Memory::operator [] (word Index) const
 byte& Memory::operator[](word Index)
 {
 	return Array[Index];
+}
+
+char *Memory::Read(char *Buffer, word Address, word Size)
+{
+	for (int i = 0; i < Size; i++)
+	{
+		word a = i + Address;
+
+		Buffer[i * 3] = (Array[a] >> 4) + ((Array[a] >> 4) > 9 ? 55 : 48);
+		Buffer[i * 3 + 1] = (Array[a] & 0x0F) + ((Array[a] & 0x0F) > 9 ? 55 : 48);
+		Buffer[i * 3 + 2] = ' ';
+	}
+
+	Buffer[Size * 3] = 0;
+
+	return Buffer;
 }
 
 void Memory::Write(char const *Data, bool AddBreak)
@@ -86,4 +105,21 @@ void Memory::Write(word Address, char const *Data, bool AddBreak)
 {
 	WriteCounter = Address;
 	Write(Data, AddBreak);
+}
+
+bool Memory::ReadFile(const char *filename)
+{
+	ifstream file = ifstream();
+
+	file.open(filename, ios::binary);
+
+	if (file.is_open())
+	{
+		file.seekg(0);
+		file.read((char *)Array, 0x10000);
+		file.close();
+		return true;
+	}
+	else
+		return false;
 }

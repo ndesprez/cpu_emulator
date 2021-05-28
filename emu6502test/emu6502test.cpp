@@ -620,6 +620,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("PLA");
 			Assert::AreEqual(0x6A, (int)CPU->A);
+			// TODO: test negative and zero flags
 			AssertFlagsUnchanged();
 		}
 

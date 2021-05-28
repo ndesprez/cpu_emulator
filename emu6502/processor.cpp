@@ -138,6 +138,7 @@ bool Processor::IsLastInstruction(const char *Name, SourceType Source, TargetTyp
 	return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
 }
 
+#pragma region internal functions
 bool Processor::SignBit(byte Value)
 {
 	return Value & 0x80;
@@ -384,6 +385,15 @@ void Processor::PullAddress(word &Address)
 void Processor::Pull()
 {
 	*Target = PullByte();
+	if (Target == &P)
+	{
+		WriteFlag(fBreak, true);
+		WriteFlag(fUnused, true);
+	}
+	else
+	{
+		WriteTargetFlags();
+	}
 }
 
 void Processor::Branch()
@@ -413,8 +423,8 @@ void Processor::Break()
 {
 	if (!EndOnBreak)
 	{
-		PushAddress(PC);
-		Push(P | fBreak);
+		PushAddress(PC + 1);
+		Push(P | fBreak | fUnused);
 		PC = ReadAddress(InterruptVector);
 	}
 }
@@ -517,7 +527,7 @@ void Processor::BitTest()
 void Processor::Reset()
 {
 	S = 0xFD;
-	P = 0b00110000;
+	P = 0b00110100;
 	PC = ReadAddress(ResetVector);
 	ResetState = false;
 	InterruptState = false;
@@ -545,7 +555,7 @@ void Processor::NonMaskableInterrupt()
 void Processor::ReturnFromInterrupt()
 {
 	P = PullByte();
-	Return();
+	PullAddress(PC);
 }
 
 #pragma endregion

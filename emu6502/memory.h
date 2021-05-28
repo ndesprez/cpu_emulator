@@ -32,6 +32,8 @@ public:
 	~Memory(void);
 	byte operator [] (word Index) const;
 	byte& operator [] (word Index);
+	char * Read(char *Buffer, word Address, word Size);
 	void Write(char const *Data, bool AddBreak = true);
 	void Write(word Address, char const * Data, bool AddBreak = false);
+	bool ReadFile(const char *);
 };

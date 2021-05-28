@@ -30,7 +30,7 @@ enum Flags : byte {
 	fInterrupt	= 4,
 	fDecimal	= 8,
 	fBreak		= 16,	// always set to 1
-	// status bit 5 is always set to 1
+	fUnused		= 32,	// always set to 1
 	fOverflow	= 64,
 	fNegative	= 128
 };
@@ -239,7 +239,7 @@ protected:
 	const Instruction	*InstructionSet[256] = {};
 	const Instruction	*LastInstruction;
 
-	Memory	&RAM;		// 64kb of RAM (hopefully)
+	Memory	&RAM;			// 64kb of RAM (hopefully)
 	byte	*Source;		// instruction source
 	byte	*Target;		// instruction target
 	byte	Data;			// data register
