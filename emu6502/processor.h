@@ -245,6 +245,7 @@ protected:
 	byte	Data;			// data register
 	byte	OpCode;			// instruction register
 	word	Address;		// address register
+	int		Clock;			// internal clock
 
 	bool ResetState;				// true if SendRST() was called
 	bool InterruptState;			// true if SendIRQ() was called
@@ -266,6 +267,7 @@ protected:
 	bool ReadFlag(Flags Flag);
 	void WriteFlag(Flags Flag, bool Value);
 	void WriteTargetFlags();
+	void Tick(byte Cycles = 1);
 #pragma endregion
 
 #pragma region instructions

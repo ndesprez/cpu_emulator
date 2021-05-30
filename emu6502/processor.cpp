@@ -157,6 +157,7 @@ byte Processor::Add(byte A, byte B)
 byte Processor::ReadData(word Address)
 {
 	Data = RAM[Address];
+	Tick();
 
 	return Data;
 }
@@ -169,6 +170,7 @@ void Processor::WriteData(word Address)
 byte Processor::ReadOpCode()
 {
 	OpCode = RAM[PC++];
+	Tick();
 
 	return OpCode;
 }
@@ -181,6 +183,7 @@ void Processor::ReadDataAtPC()
 word Processor::ReadAddress(word Address)
 {
 	this->Address = RAM[Address] | (RAM[Add(Address, 1)] << 8);
+	Tick(2);
 
 	return this->Address;
 }
@@ -200,10 +203,12 @@ void Processor::ReadAddressAtPC()
 void Processor::Push(byte Data)
 {
 	RAM[Add((word)0x100, S--)] = Data;
+	Tick();
 }
 
 byte Processor::PullByte()
 {
+	Tick(2);
 	return RAM[Add((word)0x100, ++S)];
 }
 
@@ -224,6 +229,11 @@ void Processor::WriteTargetFlags()
 {
 	WriteFlag(fZero, (*Target == 0));
 	WriteFlag(fNegative, SignBit(*Target));
+}
+
+void Processor::Tick(byte Cycles)
+{
+	Clock += Cycles;
 }
 
 #pragma endregion
@@ -275,6 +285,7 @@ void Processor::RotateLeft()
 	byte c = ReadFlag(fCarry);
 	WriteFlag(fCarry, SignBit(*Target));
 	*Target = ((*Target) << 1) | c;
+	Tick(2); // one cycle for read, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -283,6 +294,7 @@ void Processor::RotateRight()
 	byte c = ReadFlag(fCarry);
 	WriteFlag(fCarry, (*Target) & 1);
 	*Target = ((*Target) >> 1) | (c << 7);
+	Tick(2); // one cycle for read, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -290,6 +302,7 @@ void Processor::ShiftLeft()
 {
 	WriteFlag(fCarry, SignBit(*Target));
 	*Target <<= 1;
+	Tick(2); // one cycle for read, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -297,18 +310,21 @@ void Processor::ShiftRight()
 {
 	WriteFlag(fCarry, (*Target) & 1);
 	*Target >>= 1;
+	Tick(2); // one cycle for read, one cycle for write
 	WriteTargetFlags();
 }
 
 void Processor::Increment()
 {
 	(*Target)++;
+	Tick(2); // one cycle for read, one cycle for write
 	WriteTargetFlags();
 }
 
 void Processor::Decrement()
 {
 	(*Target)--;
+	Tick(2); // one cycle for read, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -411,6 +427,9 @@ void Processor::Pull()
 
 void Processor::Branch()
 {
+	if ((PC & 0xFF00) != ((PC + (char)*Source) & 0xFF00))
+		Tick();
+	Tick();
 	PC += (char)*Source;
 }
 
@@ -542,6 +561,7 @@ void Processor::Reset()
 	S = 0xFF;
 	P = 0b00110100;
 	PC = ReadAddress(ResetVector);
+	Clock = 0;
 	ResetState = false;
 	InterruptState = false;
 	NonMaskableInterruptState = false;
@@ -587,6 +607,7 @@ void Processor::ExecuteInstruction()
 	{
 	case sImplied:
 		Source = nullptr;
+		Tick(); // discarded opcode
 		break;
 	case sAccumulator:
 		Source = &A;
@@ -607,10 +628,18 @@ void Processor::ExecuteInstruction()
 	case sAbsoluteX:
 		ReadAddressAtPC();
 		Source = &RAM[Add(Address, X)];
+		// no bypassing cycle for store instructions
+		if (((Address & 0xFF00) != (Add(Address, X) & 0xFF00)) || (in->Function == &Processor::Store))
+			Tick();
+		Tick();
 		break;
 	case sAbsoluteY:
 		ReadAddressAtPC();
 		Source = &RAM[Add(Address, Y)];
+		// no bypassing cycle for store instructions
+		if (((Address & 0xFF00) != (Add(Address, Y) & 0xFF00)) || (in->Function == &Processor::Store))
+			Tick();
+		Tick();
 		break;
 	case sImmediate:
 		ReadDataAtPC();
@@ -621,7 +650,10 @@ void Processor::ExecuteInstruction()
 
 		// JMP ($xxFF) bug (luckily the only instruction to use indirect mode)
 		if ((Address & 0xFF) == 0xFF)
+		{
 			Address = RAM[Address] | (RAM[Address & 0xFF00] << 8);
+			Tick(2);
+		}
 		else
 			ReadAddress(Address);
 
@@ -631,23 +663,30 @@ void Processor::ExecuteInstruction()
 		ReadDataAtPC();
 		ReadAddress(Add(Data, X));
 		Source = &RAM[Address];
+		Tick(2);
 		break;
 	case sIndirectY:
 		ReadDataAtPC();
 		ReadAddress(Data);
 		Source = &RAM[Add(Address, Y)];
+		if ((Address & 0xFF00) != (Add(Address, Y) & 0xFF00))
+			Tick();
+		Tick(2);
 		break;
 	case sZeroPage:
 		ReadDataAtPC();
 		Source = &RAM[Data];
+		Tick();
 		break;
 	case sZeroPageX:
 		ReadDataAtPC();
 		Source = &RAM[Add(Data, X)];
+		Tick(2);
 		break;
 	case sZeroPageY:
 		ReadDataAtPC();
 		Source = &RAM[Add(Data, Y)];
+		Tick(2);
 		break;
 	default:
 		// unknown addressing mode ?
