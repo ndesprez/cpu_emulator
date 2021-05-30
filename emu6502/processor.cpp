@@ -232,7 +232,11 @@ void Processor::WriteTargetFlags()
 void Processor::Load()
 {
 	*Target = *Source;
-	WriteTargetFlags();
+
+	// here we assume that if the target is S, we're executing TXS
+	// TODO: think about encoding which flags are affected in the Instruction struct
+	if(Target != &S)
+		WriteTargetFlags();
 }
 
 void Processor::Store()
@@ -314,25 +318,31 @@ void Processor::AddWithCarry()
 	if (FlagDecimal())
 	{
 		byte lo_nibble = (*Source & 0x0F) + (*Target & 0x0F) + ReadFlag(fCarry);
-		byte hi_nibble = (*Source & 0xF0) + (*Target & 0xF0);
+		word hi_nibble = (*Source & 0xF0) + (*Target & 0xF0);
 
 		if (lo_nibble >= 0x0A)
-			lo_nibble += 0x06;
+		{
+			lo_nibble -= 0x0A;
+			hi_nibble += 0x10;
+		}
+
+		if (hi_nibble >= 0xA0)
+			hi_nibble += 0x60;
 
 		result = lo_nibble + hi_nibble;
-
-		if (result >= 0xA0)
-			result += 0x60;
+		result = result;
 	}
 	else
 	{
 		result = *Target + *Source + ReadFlag(fCarry);
 	}
+	WriteFlag(fCarry, result & 0x100);
 	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
 	WriteFlag(fOverflow, (*Source ^ result) & (*Target ^ result) & 0x80);
 	*Target = result & 0xFF;
-	WriteFlag(fCarry, result & 0x100);
-	WriteTargetFlags();
+
+	if (!FlagDecimal())
+		WriteTargetFlags();
 }
 
 void Processor::SubtractWithCarry()
@@ -341,29 +351,32 @@ void Processor::SubtractWithCarry()
 
 	if (FlagDecimal())
 	{
-		byte lo_nibble = (*Target & 0x0F) - (*Source & 0x0F) - 1 + ReadFlag(fCarry);
-		byte hi_nibble = (*Target & 0xF0) - (*Source & 0xF0);
+		byte lo_nibble = (*Target & 0x0F) + ((0x99 - *Source) & 0x0F) + ReadFlag(fCarry);
+		word hi_nibble = (*Target & 0xF0) + ((0x99 - *Source) & 0xF0);
 
 		if (lo_nibble >= 0x0A)
 		{
-			lo_nibble -= 0x06;
-			hi_nibble -= 0x10;
+			lo_nibble -= 0x0A;
+			hi_nibble += 0x10;
 		}
 
-		result = (lo_nibble & 0x0F) + hi_nibble;
+		if (hi_nibble >= 0xA0)
+			hi_nibble += 0x60;
 
-		if (result >= 0xA0)
-			result -= 0x60;
+		result = lo_nibble + hi_nibble;
+		WriteFlag(fCarry, result & 0x100);
 	}
 	else
 	{
 		result = *Target - *Source - 1 + ReadFlag(fCarry);
+		WriteFlag(fCarry, (result & 0x100) == 0);
 	}
 	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
 	WriteFlag(fOverflow, ~(*Source ^ result) & (*Target ^ result) & 0x80);
 	*Target = result & 0xFF;
-	WriteFlag(fCarry, result & 0x100);
-	WriteTargetFlags();
+	
+	if(!FlagDecimal())
+		WriteTargetFlags();
 }
 
 void Processor::Push()
@@ -388,7 +401,7 @@ void Processor::Pull()
 	if (Target == &P)
 	{
 		WriteFlag(fBreak, true);
-		WriteFlag(fUnused, true);
+		WriteFlag(fReserved, true);
 	}
 	else
 	{
@@ -424,7 +437,7 @@ void Processor::Break()
 	if (!EndOnBreak)
 	{
 		PushAddress(PC + 1);
-		Push(P | fBreak | fUnused);
+		Push(P | fBreak | fReserved);
 		PC = ReadAddress(InterruptVector);
 	}
 }
@@ -526,7 +539,7 @@ void Processor::BitTest()
 
 void Processor::Reset()
 {
-	S = 0xFD;
+	S = 0xFF;
 	P = 0b00110100;
 	PC = ReadAddress(ResetVector);
 	ResetState = false;

@@ -44,8 +44,15 @@ int main(int argc, char **argv)
 			} while (previous_pc != CPU->PC);
 
 			char *buffer = new char[16 * 3 + 1];
-			cout << RAM->Read(buffer, CPU->PC - 30, 16) << endl;
-			cout << RAM->Read(buffer, CPU->PC - 14, 16) << endl << endl;
+
+			for (int a = 0; a < 0x100; a += 16)
+			{
+				cout << RAM->Read(buffer, a, 16) << endl;
+			}
+			cout << uppercase << hex << endl;
+
+			cout << CPU->PC - 30 << ": " << RAM->Read(buffer, CPU->PC - 30, 16) << endl;
+			cout << CPU->PC - 14 << ": " << RAM->Read(buffer, CPU->PC - 14, 16) << endl << endl;
 			cout << RAM->Read(buffer, 0x1F0, 16) << endl << endl;
 			delete[] buffer;
 

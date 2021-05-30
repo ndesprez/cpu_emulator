@@ -574,8 +574,6 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("TXS");
 			Assert::AreEqual(0xD3, (int)CPU->S);
-			AssertNegative(true);
-			AssertZero(false);
 			AssertFlagsUnchanged();
 		}
 
@@ -640,6 +638,7 @@ namespace emu6502test
 			AssertLastInstruction("PLP");
 			Assert::AreEqual(0x31, (int)CPU->P);
 			AssertCarry(true); // PLP doesn't affect the carry but our code does
+			AssertInterrupt(false);
 			AssertFlagsUnchanged();
 		}
 	};
@@ -1810,8 +1809,6 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("ADC", sImmediate);
 			Assert::AreEqual(0x00, (int)CPU->A);
-			AssertNegative(false);
-			AssertZero(true);
 			AssertCarry(true);
 			AssertDecimal(true);
 			AssertOverflow(false);
@@ -1837,7 +1834,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("SBC", sImmediate);
 			Assert::AreEqual(0xFF, (int)CPU->A);
-			AssertCarry(true);
+			AssertCarry(false);
 			AssertNegative(true);
 			AssertZero(false);
 			AssertOverflow(false);
@@ -1851,7 +1848,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("SBC", sAbsolute);
 			Assert::AreEqual(0x00, (int)CPU->A);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertNegative(false);
 			AssertZero(true);
 			AssertOverflow(false);
@@ -1867,7 +1864,7 @@ namespace emu6502test
 			Assert::AreEqual(0x00, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(true);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertOverflow(true);
 			AssertFlagsUnchanged();
 		}
@@ -1881,7 +1878,7 @@ namespace emu6502test
 			Assert::AreEqual(0x14, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(false);
-			AssertCarry(true);
+			AssertCarry(false);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
@@ -1895,7 +1892,7 @@ namespace emu6502test
 			Assert::AreEqual(0xDF, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
-			AssertCarry(true);
+			AssertCarry(false);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
@@ -1909,7 +1906,7 @@ namespace emu6502test
 			Assert::AreEqual(0x00, (int)CPU->A);
 			AssertNegative(false);
 			AssertZero(true);
-			AssertCarry(false);
+			AssertCarry(true);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
@@ -1924,7 +1921,7 @@ namespace emu6502test
 			Assert::AreEqual(0xF0, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
-			AssertCarry(true);
+			AssertCarry(false);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();
 		}
@@ -1939,7 +1936,7 @@ namespace emu6502test
 			Assert::AreEqual(0xFF, (int)CPU->A);
 			AssertNegative(true);
 			AssertZero(false);
-			AssertCarry(true);
+			AssertCarry(false);
 			AssertOverflow(true);
 			AssertFlagsUnchanged();
 		}
@@ -1950,9 +1947,7 @@ namespace emu6502test
 			CPU->Run();
 			AssertLastInstruction("SBC", sImmediate);
 			Assert::AreEqual(0x05, (int)CPU->A);
-			AssertCarry(false);
-			AssertNegative(false);
-			AssertZero(false);
+			AssertCarry(true);
 			AssertDecimal(true);
 			AssertOverflow(false);
 			AssertFlagsUnchanged();

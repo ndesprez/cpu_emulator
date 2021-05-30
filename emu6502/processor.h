@@ -30,7 +30,7 @@ enum Flags : byte {
 	fInterrupt	= 4,
 	fDecimal	= 8,
 	fBreak		= 16,	// always set to 1
-	fUnused		= 32,	// always set to 1
+	fReserved	= 32,	// always set to 1
 	fOverflow	= 64,
 	fNegative	= 128
 };
