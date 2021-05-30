@@ -16,82 +16,62 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
-#include <assert.h>
-#include <ctype.h>
-
+#include <iostream>
+#include <bitset>
 #include "processor.h"
 
-Processor *CPU;
-byte	  *RAM;
+using namespace std;
 
-word		WriteCounter;
-
-void _write(char const *Data, bool AddBreak = true)
+int main(int argc, char **argv)
 {
-	byte value;
-	word i = 0;
-	bool high = true;
-
-	while (char c = Data[i])
+	if (argc == 2)
 	{
-		if (c == ' ')
+		Memory *RAM = new Memory();
+
+		Processor *CPU = new Processor(RAM);
+		CPU->EndOnBreak = false;
+		CPU->SendRST();
+		CPU->Step();
+		CPU->PC = 0x400;
+
+		if (RAM->ReadFile(argv[1]))
 		{
-			assert(high == true);
-			i++;
-			continue;
+			word previous_pc;
+			do
+			{
+				previous_pc = CPU->PC;
+				CPU->Step();
+			} while (previous_pc != CPU->PC);
+
+			char *buffer = new char[16 * 3 + 1];
+
+			for (int a = 0; a < 0x100; a += 16)
+			{
+				cout << RAM->Read(buffer, a, 16) << endl;
+			}
+			cout << uppercase << hex << endl;
+
+			cout << CPU->PC - 30 << ": " << RAM->Read(buffer, CPU->PC - 30, 16) << endl;
+			cout << CPU->PC - 14 << ": " << RAM->Read(buffer, CPU->PC - 14, 16) << endl << endl;
+			cout << RAM->Read(buffer, 0x1F0, 16) << endl << endl;
+			delete[] buffer;
+
+			cout << "A  = " << uppercase << hex << (int)CPU->A << endl;
+			cout << "X  = " << (int)CPU->X << endl;
+			cout << "Y  = " << (int)CPU->Y << endl;
+			cout << "S  = " << (int)CPU->S << endl;
+			cout << "PC = " << (int)CPU->PC << endl;
+			cout << "     NO-BDIZC" << endl;
+			cout << "P  = " << bitset<8>(CPU->P) << endl;
 		}
-
-		assert(isxdigit(c));
-
-		if (high)
-			value = 0;
-
-		if (c >= '0' && c <= '9')
-			value |= c - 0x30;
-		else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f')
-			value |= (c | 0x20) - 0x57;
-
-		if (high)
-			value <<= 4;
 		else
-			RAM[WriteCounter++] = value;
-
-		high = !high;
-		i++;
+		{
+			cout << "Cannot open file \"" << argv[1] << "\"" << endl;
+		}
 	}
-	assert(high == true);
-
-	if (AddBreak)
+	else
 	{
-		RAM[WriteCounter] = 0x00;
+		cout << "Missing argument" << endl;
 	}
-}
-
-void _write(word Address, char const *Data, bool AddBreak = false)
-{
-	WriteCounter = Address;
-	_write(Data, AddBreak);
-}
-
-int main(void)
-{
-	RAM = new byte[0x10000];
-
-	// set PC vector to 0x1000
-	RAM[0xFFFC] = 0x00;
-	RAM[0xFFFD] = 0x10;
-
-	CPU = new Processor(RAM);
-	CPU->EndOnBreak = true;
-	CPU->SendRST();
-	CPU->Step();
-	WriteCounter = CPU->PC;
-	_write("A2 30 18 36 30");
-	_write(0x0060, "C4");
-	CPU->Run();
-
-	delete CPU;
-	delete[] RAM;
-
 	return 0;
 }

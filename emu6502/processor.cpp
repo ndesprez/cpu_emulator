@@ -16,11 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
+#include <string.h>
 #include "processor.h"
 
-Processor::Processor(byte *Array)
+Processor::Processor(Memory *RAM) : RAM(*RAM)
 {
-	Memory = Array;
 	Source = nullptr;
 	Target = nullptr;
 	Data = 0;
@@ -138,6 +138,7 @@ bool Processor::IsLastInstruction(const char *Name, SourceType Source, TargetTyp
 	return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
 }
 
+#pragma region internal functions
 bool Processor::SignBit(byte Value)
 {
 	return Value & 0x80;
@@ -155,19 +156,19 @@ byte Processor::Add(byte A, byte B)
 
 byte Processor::ReadData(word Address)
 {
-	Data = Memory[Address];
+	Data = RAM[Address];
 
 	return Data;
 }
 
 void Processor::WriteData(word Address)
 {
-	Memory[Address] = Data;
+	RAM[Address] = Data;
 }
 
 byte Processor::ReadOpCode()
 {
-	OpCode = Memory[PC++];
+	OpCode = RAM[PC++];
 
 	return OpCode;
 }
@@ -179,21 +180,31 @@ void Processor::ReadDataAtPC()
 
 word Processor::ReadAddress(word Address)
 {
-	this->Address = Memory[Address] | (Memory[Add(Address, 1)] << 8);
+	this->Address = RAM[Address] | (RAM[Add(Address, 1)] << 8);
 
 	return this->Address;
 }
 
 void Processor::WriteAddress(word Address)
 {
-	Memory[Address] = this->Address & 0xFF;
-	Memory[Add(Address, 1)] = this->Address >> 8;
+	RAM[Address] = this->Address & 0xFF;
+	RAM[Add(Address, 1)] = this->Address >> 8;
 }
 
 void Processor::ReadAddressAtPC()
 {
 	ReadAddress(PC);
 	PC += 2;
+}
+
+void Processor::Push(byte Data)
+{
+	RAM[Add((word)0x100, S--)] = Data;
+}
+
+byte Processor::PullByte()
+{
+	return RAM[Add((word)0x100, ++S)];
 }
 
 bool Processor::ReadFlag(Flags Flag)
@@ -221,7 +232,11 @@ void Processor::WriteTargetFlags()
 void Processor::Load()
 {
 	*Target = *Source;
-	WriteTargetFlags();
+
+	// here we assume that if the target is S, we're executing TXS
+	// TODO: think about encoding which flags are affected in the Instruction struct
+	if(Target != &S)
+		WriteTargetFlags();
 }
 
 void Processor::Store()
@@ -299,48 +314,99 @@ void Processor::Decrement()
 
 void Processor::AddWithCarry()
 {
-	// TODO: implement BCD addition
-	word result = *Target + *Source + ReadFlag(fCarry);
+	word result;
+	if (FlagDecimal())
+	{
+		byte lo_nibble = (*Source & 0x0F) + (*Target & 0x0F) + ReadFlag(fCarry);
+		word hi_nibble = (*Source & 0xF0) + (*Target & 0xF0);
 
+		if (lo_nibble >= 0x0A)
+		{
+			lo_nibble -= 0x0A;
+			hi_nibble += 0x10;
+		}
+
+		if (hi_nibble >= 0xA0)
+			hi_nibble += 0x60;
+
+		result = lo_nibble + hi_nibble;
+		result = result;
+	}
+	else
+	{
+		result = *Target + *Source + ReadFlag(fCarry);
+	}
+	WriteFlag(fCarry, result & 0x100);
 	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
 	WriteFlag(fOverflow, (*Source ^ result) & (*Target ^ result) & 0x80);
 	*Target = result & 0xFF;
-	WriteFlag(fCarry, result & 0x100);
-	WriteTargetFlags();
+
+	if (!FlagDecimal())
+		WriteTargetFlags();
 }
 
 void Processor::SubtractWithCarry()
 {
-	// TODO: implement BCD subtraction
-	word result = *Target + ~*Source + ReadFlag(fCarry);
+	word result;
 
-	WriteFlag(fOverflow, (~*Source ^ result) & (*Target ^ result) & 0x80);
+	if (FlagDecimal())
+	{
+		byte lo_nibble = (*Target & 0x0F) + ((0x99 - *Source) & 0x0F) + ReadFlag(fCarry);
+		word hi_nibble = (*Target & 0xF0) + ((0x99 - *Source) & 0xF0);
+
+		if (lo_nibble >= 0x0A)
+		{
+			lo_nibble -= 0x0A;
+			hi_nibble += 0x10;
+		}
+
+		if (hi_nibble >= 0xA0)
+			hi_nibble += 0x60;
+
+		result = lo_nibble + hi_nibble;
+		WriteFlag(fCarry, result & 0x100);
+	}
+	else
+	{
+		result = *Target - *Source - 1 + ReadFlag(fCarry);
+		WriteFlag(fCarry, (result & 0x100) == 0);
+	}
+	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
+	WriteFlag(fOverflow, ~(*Source ^ result) & (*Target ^ result) & 0x80);
 	*Target = result & 0xFF;
-	WriteFlag(fCarry, result & 0x100);
-	WriteTargetFlags();
+	
+	if(!FlagDecimal())
+		WriteTargetFlags();
 }
 
-// TODO: write a generic internal byte push
 void Processor::Push()
 {
-	Memory[Add((word)0x100, S--)] = *Target;
+	Push(*Target);
 }
 
 void Processor::PushAddress(word Address)
 {
-	Memory[Add((word)0x100, S--)] = Address >> 8;
-	Memory[Add((word)0x100, S--)] = Address & 0xFF;
+	Push(Address >> 8);
+	Push(Address & 0xFF);
 }
 
 void Processor::PullAddress(word &Address)
 {
-	Address = Memory[Add((word)0x100, ++S)] | (Memory[Add((word)0x100, ++S)] << 8);
+	Address = PullByte() | (PullByte() << 8);
 }
 
-// TODO: write a generic internal byte pull
 void Processor::Pull()
 {
-	*Target = Memory[Add((word)0x100, ++S)];
+	*Target = PullByte();
+	if (Target == &P)
+	{
+		WriteFlag(fBreak, true);
+		WriteFlag(fReserved, true);
+	}
+	else
+	{
+		WriteTargetFlags();
+	}
 }
 
 void Processor::Branch()
@@ -350,7 +416,7 @@ void Processor::Branch()
 
 void Processor::Jump()
 {
-	// this avoids PC = &Memory[Address] in absolute and indirect modes
+	// this avoids PC = &RAM[Address] in absolute and indirect modes
 	PC = Address;
 }
 
@@ -370,8 +436,8 @@ void Processor::Break()
 {
 	if (!EndOnBreak)
 	{
-		PushAddress(PC);
-		Memory[Add((word)0x100, S--)] = P | fBreak;
+		PushAddress(PC + 1);
+		Push(P | fBreak | fReserved);
 		PC = ReadAddress(InterruptVector);
 	}
 }
@@ -473,8 +539,8 @@ void Processor::BitTest()
 
 void Processor::Reset()
 {
-	S = 0xFD;
-	P = 0b00110000;
+	S = 0xFF;
+	P = 0b00110100;
 	PC = ReadAddress(ResetVector);
 	ResetState = false;
 	InterruptState = false;
@@ -485,7 +551,7 @@ void Processor::Interrupt()
 {
 	InterruptState = false;
 	PushAddress(PC);
-	Memory[Add((word)0x100, S--)] = P & ~fBreak;
+	Push(P & ~fBreak);
 	WriteFlag(fInterrupt, true);
 	PC = ReadAddress(InterruptVector);
 }
@@ -494,15 +560,15 @@ void Processor::NonMaskableInterrupt()
 {
 	NonMaskableInterruptState = false;
 	PushAddress(PC);
-	Memory[Add((word)0x100, S--)] = P;
+	Push(P);
 	WriteFlag(fInterrupt, true);
 	PC = ReadAddress(NonMaskableInterruptVector);
 }
 
 void Processor::ReturnFromInterrupt()
 {
-	P = Memory[Add((word)0x100, ++S)];
-	Return();
+	P = PullByte();
+	PullAddress(PC);
 }
 
 #pragma endregion
@@ -536,15 +602,15 @@ void Processor::ExecuteInstruction()
 		break;
 	case sAbsolute:
 		ReadAddressAtPC();
-		Source = &Memory[Address];
+		Source = &RAM[Address];
 		break;
 	case sAbsoluteX:
 		ReadAddressAtPC();
-		Source = &Memory[Add(Address, X)];
+		Source = &RAM[Add(Address, X)];
 		break;
 	case sAbsoluteY:
 		ReadAddressAtPC();
-		Source = &Memory[Add(Address, Y)];
+		Source = &RAM[Add(Address, Y)];
 		break;
 	case sImmediate:
 		ReadDataAtPC();
@@ -555,33 +621,33 @@ void Processor::ExecuteInstruction()
 
 		// JMP ($xxFF) bug (luckily the only instruction to use indirect mode)
 		if ((Address & 0xFF) == 0xFF)
-			Address = Memory[Address] | (Memory[Address & 0xFF00] << 8);
+			Address = RAM[Address] | (RAM[Address & 0xFF00] << 8);
 		else
 			ReadAddress(Address);
 
-		Source = &Memory[Address];
+		Source = &RAM[Address];
 		break;
 	case sXIndirect:
 		ReadDataAtPC();
 		ReadAddress(Add(Data, X));
-		Source = &Memory[Address];
+		Source = &RAM[Address];
 		break;
 	case sIndirectY:
 		ReadDataAtPC();
 		ReadAddress(Data);
-		Source = &Memory[Add(Address, Y)];
+		Source = &RAM[Add(Address, Y)];
 		break;
 	case sZeroPage:
 		ReadDataAtPC();
-		Source = &Memory[Data];
+		Source = &RAM[Data];
 		break;
 	case sZeroPageX:
 		ReadDataAtPC();
-		Source = &Memory[Add(Data, X)];
+		Source = &RAM[Add(Data, X)];
 		break;
 	case sZeroPageY:
 		ReadDataAtPC();
-		Source = &Memory[Add(Data, Y)];
+		Source = &RAM[Add(Data, Y)];
 		break;
 	default:
 		// unknown addressing mode ?

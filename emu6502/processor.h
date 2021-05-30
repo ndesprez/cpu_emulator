@@ -18,23 +18,21 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include <string.h>
-
-using byte = unsigned char;
-using word = unsigned short;
+#include "types.h"
+#include "memory.h"
 
 // TODO: add a namespace?
 
 // status register flags
 enum Flags : byte {
-	fCarry = 1,
-	fZero = 2,
-	fInterrupt = 4,
-	fDecimal = 8,
-	fBreak = 16,	// always set to 1
-	// status bit 5 is always set to 1
-	fOverflow = 64,
-	fNegative = 128
+	fCarry		= 1,
+	fZero		= 2,
+	fInterrupt	= 4,
+	fDecimal	= 8,
+	fBreak		= 16,	// always set to 1
+	fReserved	= 32,	// always set to 1
+	fOverflow	= 64,
+	fNegative	= 128
 };
 
 // equivalent to addressing modes plus extra for transfer instructions
@@ -238,10 +236,10 @@ protected:
 		{0x98, "TYA",	sIndexY,		tAccumulator,	&Processor::Load}
 	};
 
-	const Instruction*	InstructionSet[256] = {};
-	const Instruction*	LastInstruction;
+	const Instruction	*InstructionSet[256] = {};
+	const Instruction	*LastInstruction;
 
-	byte	*Memory;		// 64kb of RAM (hopefully)
+	Memory	&RAM;			// 64kb of RAM (hopefully)
 	byte	*Source;		// instruction source
 	byte	*Target;		// instruction target
 	byte	Data;			// data register
@@ -263,6 +261,8 @@ protected:
 	word ReadAddress(word Address);
 	void WriteAddress(word Address);
 	void ReadAddressAtPC();
+	void Push(byte Data);
+	byte PullByte();
 	bool ReadFlag(Flags Flag);
 	void WriteFlag(Flags Flag, bool Value);
 	void WriteTargetFlags();
@@ -309,12 +309,11 @@ protected:
 	void SetDecimalFlag();
 	void SetInterruptFlag();
 	void BitTest();
-
+#pragma endregion
 	void Reset();
 	void Interrupt();
 	void NonMaskableInterrupt();
 	void ReturnFromInterrupt();
-#pragma endregion
 
 	void ExecuteInstruction();
 			
@@ -326,7 +325,7 @@ public:
 	byte	P;		// status flags
 	bool	EndOnBreak;
 
-	Processor(byte *Array);
+	Processor(Memory *RAM);
 	bool FlagCarry();
 	bool FlagZero();
 	bool FlagInterrupt();
