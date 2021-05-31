@@ -208,7 +208,7 @@ void Processor::Push(byte Data)
 
 byte Processor::PullByte()
 {
-	Tick(2);
+	Tick();
 	return RAM[Add((word)0x100, ++S)];
 }
 
@@ -233,6 +233,7 @@ void Processor::WriteTargetFlags()
 
 void Processor::Tick(byte Cycles)
 {
+	// TODO: insert throttling here
 	Clock += Cycles;
 }
 
@@ -285,7 +286,7 @@ void Processor::RotateLeft()
 	byte c = ReadFlag(fCarry);
 	WriteFlag(fCarry, SignBit(*Target));
 	*Target = ((*Target) << 1) | c;
-	Tick(2); // one cycle for read, one cycle for write
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -294,7 +295,7 @@ void Processor::RotateRight()
 	byte c = ReadFlag(fCarry);
 	WriteFlag(fCarry, (*Target) & 1);
 	*Target = ((*Target) >> 1) | (c << 7);
-	Tick(2); // one cycle for read, one cycle for write
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -302,7 +303,7 @@ void Processor::ShiftLeft()
 {
 	WriteFlag(fCarry, SignBit(*Target));
 	*Target <<= 1;
-	Tick(2); // one cycle for read, one cycle for write
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -310,21 +311,21 @@ void Processor::ShiftRight()
 {
 	WriteFlag(fCarry, (*Target) & 1);
 	*Target >>= 1;
-	Tick(2); // one cycle for read, one cycle for write
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
 void Processor::Increment()
 {
 	(*Target)++;
-	Tick(2); // one cycle for read, one cycle for write
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
 void Processor::Decrement()
 {
 	(*Target)--;
-	Tick(2); // one cycle for read, one cycle for write
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -414,6 +415,7 @@ void Processor::PullAddress(word &Address)
 void Processor::Pull()
 {
 	*Target = PullByte();
+	Tick(); // discarded data
 	if (Target == &P)
 	{
 		WriteFlag(fBreak, true);
@@ -442,12 +444,14 @@ void Processor::Jump()
 void Processor::Call()
 {
 	PushAddress(PC - 1);
+	Tick(); // discarded data
 	Jump();
 }
 
 void Processor::Return()
 {
 	PullAddress(PC);
+	Tick(2); // discarded data
 	PC++;
 }
 
@@ -588,6 +592,7 @@ void Processor::NonMaskableInterrupt()
 void Processor::ReturnFromInterrupt()
 {
 	P = PullByte();
+	Tick(); // discarded data
 	PullAddress(PC);
 }
 
@@ -624,12 +629,15 @@ void Processor::ExecuteInstruction()
 	case sAbsolute:
 		ReadAddressAtPC();
 		Source = &RAM[Address];
+		// if we write data in some way
+		if (in->Target != tNone)
+			Tick();
 		break;
 	case sAbsoluteX:
 		ReadAddressAtPC();
 		Source = &RAM[Add(Address, X)];
 		// no bypassing cycle for store instructions
-		if (((Address & 0xFF00) != (Add(Address, X) & 0xFF00)) || (in->Function == &Processor::Store))
+		if (!in->InternalExecution || (Add((word)(Address & 0xFF), X) >= 0x100))
 			Tick();
 		Tick();
 		break;
@@ -637,7 +645,7 @@ void Processor::ExecuteInstruction()
 		ReadAddressAtPC();
 		Source = &RAM[Add(Address, Y)];
 		// no bypassing cycle for store instructions
-		if (((Address & 0xFF00) != (Add(Address, Y) & 0xFF00)) || (in->Function == &Processor::Store))
+		if (!in->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
 			Tick();
 		Tick();
 		break;
@@ -669,9 +677,9 @@ void Processor::ExecuteInstruction()
 		ReadDataAtPC();
 		ReadAddress(Data);
 		Source = &RAM[Add(Address, Y)];
-		if ((Address & 0xFF00) != (Add(Address, Y) & 0xFF00))
+		if (!in->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
 			Tick();
-		Tick(2);
+		Tick();
 		break;
 	case sZeroPage:
 		ReadDataAtPC();
