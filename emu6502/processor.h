@@ -37,22 +37,26 @@ enum Flags : byte {
 
 // equivalent to addressing modes plus extra for transfer instructions
 enum SourceType {
-	sAccumulator,	// TAX, TAY
-	sIndexX,		// TXA, TXS
-	sIndexY,		// TYA
-	sStackPointer,	// TSX
-	sAbsolute,		// LDA $1234
-	sAbsoluteX,		// LDA $1234, X
-	sAbsoluteY,		// LDA $1234, Y
-	sImmediate,		// LDA #$12
-	sImplied,		// BRK, INX, CLC, ASL A, etc.
-	sIndirect,		// JMP ($1234)
-	sXIndirect,		// LDA ($12), X
-	sIndirectY,		// LDA ($12, Y)
-	sZeroPage,		// LDA $12
-	sZeroPageX,		// LDA $12, X
-	sZeroPageY		// LDA $12, Y
+	sAccumulator = 0,	// TAX, TAY
+	sIndexX,			// TXA, TXS
+	sIndexY,			// TYA
+	sStackPointer,		// TSX
+	sAbsolute,			// LDA $1234
+	sAbsoluteX,			// LDA $1234, X
+	sAbsoluteY,			// LDA $1234, Y
+	sImmediate,			// LDA #$12
+	sImplied,			// BRK, INX, CLC, ASL A, etc.
+	sIndirect,			// JMP ($1234)
+	sXIndirect,			// LDA ($12), X
+	sIndirectY,			// LDA ($12, Y)
+	sZeroPage,			// LDA $12
+	sZeroPageX,			// LDA $12, X
+	sZeroPageY			// LDA $12, Y
 };
+
+// instruction length in bytes, indexed by SourceType
+// TODO: could it be encoded in the lower two bits of SourceType?
+const byte InstructionLength[15] = {1, 1, 1, 1, 3, 3, 3, 2, 1, 3, 2, 2, 2, 2, 2};
 
 enum TargetType {
 	tNone,			// paired with sImplied, branch and jump instructions

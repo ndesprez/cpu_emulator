@@ -71,26 +71,26 @@ void Memory::Write(char const *Data, bool AddBreak)
 		if (c == ' ')
 		{
 			assert(high == true);
-			i++;
-			continue;
 		}
-
-		assert(isxdigit(c));
-
-		if (high)
-			value = 0;
-
-		if (c >= '0' && c <= '9')
-			value |= c - 0x30;
-		else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f')
-			value |= (c | 0x20) - 0x57;
-
-		if (high)
-			value <<= 4;
 		else
-			Array[WriteCounter++] = value;
+		{
+			assert(isxdigit(c));
 
-		high = !high;
+			if (high)
+				value = 0;
+
+			if (c >= '0' && c <= '9')
+				value |= c - 0x30;
+			else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f')
+				value |= (c | 0x20) - 0x57;
+
+			if (high)
+				value <<= 4;
+			else
+				Array[WriteCounter++] = value;
+
+			high = !high;
+		}
 		i++;
 	}
 	assert(high == true);
@@ -109,9 +109,7 @@ void Memory::Write(word Address, char const *Data, bool AddBreak)
 
 bool Memory::ReadFile(const char *filename)
 {
-	ifstream file = ifstream();
-
-	file.open(filename, ios::binary);
+	ifstream file = ifstream(filename, ios::binary);
 
 	if (file.is_open())
 	{

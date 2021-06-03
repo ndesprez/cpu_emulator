@@ -17,6 +17,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
 #include <string.h>
+#include <assert.h>
 #include "processor.h"
 
 Processor::Processor(Memory *RAM) : RAM(*RAM)
@@ -26,6 +27,7 @@ Processor::Processor(Memory *RAM) : RAM(*RAM)
 	Data = 0;
 	Address = 0;
 	OpCode = 0;
+	LastInstruction = nullptr;
 
 	A = 0;
 	X = 0;
@@ -33,6 +35,8 @@ Processor::Processor(Memory *RAM) : RAM(*RAM)
 	S = 0;
 	P = 0;
 	PC = 0;
+
+	Clock = 0;
 
 	EndOnBreak = false;
 
@@ -461,6 +465,7 @@ void Processor::Break()
 	{
 		PushAddress(PC + 1);
 		Push(P | fBreak | fReserved);
+		WriteFlag(fInterrupt, true);
 		PC = ReadAddress(InterruptVector);
 	}
 }
@@ -604,9 +609,15 @@ void Processor::ExecuteInstruction()
 
 	// TODO: handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
 	const Instruction *in = InstructionSet[OpCode];
+	assert(in != nullptr);
 
 	if ((OpCode != BreakOpCode) || (!EndOnBreak))
 		LastInstruction = in;
+
+	if (InstructionLength[in->Source] == 2)
+		ReadDataAtPC();
+	else if (InstructionLength[in->Source] == 3)
+		ReadAddressAtPC();
 
 	switch (in->Source)
 	{
@@ -627,35 +638,27 @@ void Processor::ExecuteInstruction()
 		Source = &S;
 		break;
 	case sAbsolute:
-		ReadAddressAtPC();
 		Source = &RAM[Address];
 		// if we write data in some way
 		if (in->Target != tNone)
 			Tick();
 		break;
 	case sAbsoluteX:
-		ReadAddressAtPC();
 		Source = &RAM[Add(Address, X)];
-		// no bypassing cycle for store instructions
 		if (!in->InternalExecution || (Add((word)(Address & 0xFF), X) >= 0x100))
 			Tick();
 		Tick();
 		break;
 	case sAbsoluteY:
-		ReadAddressAtPC();
 		Source = &RAM[Add(Address, Y)];
-		// no bypassing cycle for store instructions
 		if (!in->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
 			Tick();
 		Tick();
 		break;
 	case sImmediate:
-		ReadDataAtPC();
 		Source = &Data;
 		break;
 	case sIndirect:
-		ReadAddressAtPC();
-
 		// JMP ($xxFF) bug (luckily the only instruction to use indirect mode)
 		if ((Address & 0xFF) == 0xFF)
 		{
@@ -668,13 +671,11 @@ void Processor::ExecuteInstruction()
 		Source = &RAM[Address];
 		break;
 	case sXIndirect:
-		ReadDataAtPC();
 		ReadAddress(Add(Data, X));
 		Source = &RAM[Address];
 		Tick(2);
 		break;
 	case sIndirectY:
-		ReadDataAtPC();
 		ReadAddress(Data);
 		Source = &RAM[Add(Address, Y)];
 		if (!in->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
@@ -682,17 +683,14 @@ void Processor::ExecuteInstruction()
 		Tick();
 		break;
 	case sZeroPage:
-		ReadDataAtPC();
 		Source = &RAM[Data];
 		Tick();
 		break;
 	case sZeroPageX:
-		ReadDataAtPC();
 		Source = &RAM[Add(Data, X)];
 		Tick(2);
 		break;
 	case sZeroPageY:
-		ReadDataAtPC();
 		Source = &RAM[Add(Data, Y)];
 		Tick(2);
 		break;
