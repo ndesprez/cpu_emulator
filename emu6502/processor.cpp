@@ -105,7 +105,9 @@ void Processor::Step()
 		return;
 	}
 
-	ExecuteInstruction();
+	const Instruction *ins = ReadInstruction();
+	DecodeInstruction(ins);
+	ExecuteInstruction(ins);
 
 	if (NonMaskableInterruptState)
 		NonMaskableInterrupt();
@@ -158,50 +160,22 @@ byte Processor::Add(byte A, byte B)
 	return ((word)A + B) & 0xFF;
 }
 
-byte Processor::ReadData(word Address)
+byte Processor::ReadByte(word Address)
 {
-	Data = RAM[Address];
 	Tick();
-
-	return Data;
-}
-
-void Processor::WriteData(word Address)
-{
-	RAM[Address] = Data;
+	return RAM[Address];
 }
 
 byte Processor::ReadOpCode()
 {
-	OpCode = RAM[PC++];
-	Tick();
-
+	OpCode = ReadByte(PC++);
 	return OpCode;
 }
 
-void Processor::ReadDataAtPC()
+word Processor::ReadWord(word Address)
 {
-	ReadData(PC++);
-}
-
-word Processor::ReadAddress(word Address)
-{
-	this->Address = RAM[Address] | (RAM[Add(Address, 1)] << 8);
 	Tick(2);
-
-	return this->Address;
-}
-
-void Processor::WriteAddress(word Address)
-{
-	RAM[Address] = this->Address & 0xFF;
-	RAM[Add(Address, 1)] = this->Address >> 8;
-}
-
-void Processor::ReadAddressAtPC()
-{
-	ReadAddress(PC);
-	PC += 2;
+	return RAM[Address] | (RAM[Add(Address, 1)] << 8);
 }
 
 void Processor::Push(byte Data)
@@ -263,7 +237,6 @@ void Processor::Compare()
 {
 	WriteFlag(fCarry, (*Target >= *Source));
 	WriteFlag(fZero, (*Target == *Source));
-	// TODO: code a better byte subtraction if necessary
 	WriteFlag(fNegative, SignBit(*Target - *Source));
 }
 
@@ -392,7 +365,7 @@ void Processor::SubtractWithCarry()
 		result = *Target - *Source - 1 + ReadFlag(fCarry);
 		WriteFlag(fCarry, (result & 0x100) == 0);
 	}
-	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
+	// if both operands sign is identical but differs from the result sign (e.g. -100 - 49 = 107)
 	WriteFlag(fOverflow, ~(*Source ^ result) & (*Target ^ result) & 0x80);
 	*Target = result & 0xFF;
 	
@@ -466,7 +439,7 @@ void Processor::Break()
 		PushAddress(PC + 1);
 		Push(P | fBreak | fReserved);
 		WriteFlag(fInterrupt, true);
-		PC = ReadAddress(InterruptVector);
+		PC = ReadWord(InterruptVector);
 	}
 }
 
@@ -569,7 +542,7 @@ void Processor::Reset()
 {
 	S = 0xFF;
 	P = 0b00110100;
-	PC = ReadAddress(ResetVector);
+	PC = ReadWord(ResetVector);
 	Clock = 0;
 	ResetState = false;
 	InterruptState = false;
@@ -582,7 +555,7 @@ void Processor::Interrupt()
 	PushAddress(PC);
 	Push(P & ~fBreak);
 	WriteFlag(fInterrupt, true);
-	PC = ReadAddress(InterruptVector);
+	PC = ReadWord(InterruptVector);
 }
 
 void Processor::NonMaskableInterrupt()
@@ -591,7 +564,7 @@ void Processor::NonMaskableInterrupt()
 	PushAddress(PC);
 	Push(P);
 	WriteFlag(fInterrupt, true);
-	PC = ReadAddress(NonMaskableInterruptVector);
+	PC = ReadWord(NonMaskableInterruptVector);
 }
 
 void Processor::ReturnFromInterrupt()
@@ -603,23 +576,32 @@ void Processor::ReturnFromInterrupt()
 
 #pragma endregion
 
-void Processor::ExecuteInstruction()
+const Processor::Instruction *Processor::ReadInstruction()
 {
 	ReadOpCode();
 
 	// TODO: handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
-	const Instruction *in = InstructionSet[OpCode];
-	assert(in != nullptr);
+	const Instruction *ins = InstructionSet[OpCode];
 
 	if ((OpCode != BreakOpCode) || (!EndOnBreak))
-		LastInstruction = in;
+		LastInstruction = ins;
 
-	if (InstructionLength[in->Source] == 2)
-		ReadDataAtPC();
-	else if (InstructionLength[in->Source] == 3)
-		ReadAddressAtPC();
+	assert(ins != nullptr);
 
-	switch (in->Source)
+	if (InstructionLength[ins->Source] == 2)
+		Data = ReadByte(PC++);
+	else if (InstructionLength[ins->Source] == 3)
+	{
+		Address = ReadWord(PC);
+		PC += 2;
+	}
+
+	return ins;
+}
+
+void Processor::DecodeInstruction(const Instruction *Ins)
+{
+	switch (Ins->Source)
 	{
 	case sImplied:
 		Source = nullptr;
@@ -640,18 +622,18 @@ void Processor::ExecuteInstruction()
 	case sAbsolute:
 		Source = &RAM[Address];
 		// if we write data in some way
-		if (in->Target != tNone)
+		if (Ins->Target != tNone)
 			Tick();
 		break;
 	case sAbsoluteX:
 		Source = &RAM[Add(Address, X)];
-		if (!in->InternalExecution || (Add((word)(Address & 0xFF), X) >= 0x100))
+		if (!Ins->InternalExecution || (Add((word)(Address & 0xFF), X) >= 0x100))
 			Tick();
 		Tick();
 		break;
 	case sAbsoluteY:
 		Source = &RAM[Add(Address, Y)];
-		if (!in->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
+		if (!Ins->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
 			Tick();
 		Tick();
 		break;
@@ -666,19 +648,18 @@ void Processor::ExecuteInstruction()
 			Tick(2);
 		}
 		else
-			ReadAddress(Address);
+			Address = ReadWord(Address);
 
 		Source = &RAM[Address];
 		break;
 	case sXIndirect:
-		ReadAddress(Add(Data, X));
-		Source = &RAM[Address];
+		Source = &RAM[ReadWord(Add(Data, X))];
 		Tick(2);
 		break;
 	case sIndirectY:
-		ReadAddress(Data);
+		Address = ReadWord(Data);
 		Source = &RAM[Add(Address, Y)];
-		if (!in->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
+		if (!Ins->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
 			Tick();
 		Tick();
 		break;
@@ -700,7 +681,7 @@ void Processor::ExecuteInstruction()
 	}
 
 	// TODO: this can be set in the LegalInstructionSet array initialisation
-	switch (in->Target)
+	switch (Ins->Target)
 	{
 	case tNone:
 		Target = nullptr;
@@ -727,6 +708,9 @@ void Processor::ExecuteInstruction()
 		// unknown target ?
 		break;
 	}
+}
 
-	(this->*in->Function)();
+void Processor::ExecuteInstruction(const Instruction *Ins)
+{
+	(this->*Ins->Function)();
 }

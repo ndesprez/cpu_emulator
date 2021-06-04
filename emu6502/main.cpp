@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 
 			for (int a = 0; a < 0x100; a += 16)
 			{
-				cout << RAM->Read(buffer, a, 16) << endl;
+				cout << RAM->Read(buffer, a + 0x200, 16) << endl;
 			}
 			cout << uppercase << hex << endl;
 

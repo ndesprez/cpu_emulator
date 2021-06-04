@@ -259,13 +259,9 @@ protected:
 	bool SignBit(byte Value);
 	word Add(word A, byte B);
 	byte Add(byte A, byte B);
-	byte ReadData(word Address);
-	void WriteData(word Address);
+	byte ReadByte(word Address);
 	byte ReadOpCode();
-	void ReadDataAtPC();
-	word ReadAddress(word Address);
-	void WriteAddress(word Address);
-	void ReadAddressAtPC();
+	word ReadWord(word Address);
 	void Push(byte Data);
 	byte PullByte();
 	bool ReadFlag(Flags Flag);
@@ -321,7 +317,9 @@ protected:
 	void NonMaskableInterrupt();
 	void ReturnFromInterrupt();
 
-	void ExecuteInstruction();
+	const Instruction *ReadInstruction();
+	void DecodeInstruction(const Instruction * Ins);
+	void ExecuteInstruction(const Instruction * Ins);
 			
 public:
 	int		Clock;	// internal clock
