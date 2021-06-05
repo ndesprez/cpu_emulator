@@ -117,12 +117,12 @@ namespace emu6502test
 		Assert::IsTrue(CPU->IsLastInstruction(Name), MessageMismatch);
 	}
 
-	void AssertLastInstruction(const char *Name, SourceType Source) 
+	void AssertLastInstruction(const char *Name, Sources Source) 
 	{
 		Assert::IsTrue(CPU->IsLastInstruction(Name, Source), MessageMismatch);
 	}
 
-	void AssertLastInstruction(const char *Name, SourceType Source, TargetType Target)
+	void AssertLastInstruction(const char *Name, Sources Source, Targets Target)
 	{
 		Assert::IsTrue(CPU->IsLastInstruction(Name, Source, Target), MessageMismatch);
 	}

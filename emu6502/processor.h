@@ -21,6 +21,8 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include "types.h"
 #include "memory.h"
 
+using namespace std;
+
 // TODO: add a namespace?
 
 // status register flags
@@ -36,7 +38,7 @@ enum Flags : byte {
 };
 
 // equivalent to addressing modes plus extra for transfer instructions
-enum SourceType {
+enum Sources {
 	sAccumulator = 0,	// TAX, TAY
 	sIndexX,			// TXA, TXS
 	sIndexY,			// TYA
@@ -58,7 +60,7 @@ enum SourceType {
 // TODO: could it be encoded in the lower two bits of SourceType?
 const byte InstructionLength[15] = {1, 1, 1, 1, 3, 3, 3, 2, 1, 3, 2, 2, 2, 2, 2};
 
-enum TargetType {
+enum Targets {
 	tNone,			// paired with sImplied, branch and jump instructions
 	tAccumulator,	// AND, CMP, ADC, etc.
 	tIndexX,		// CPX, TAX, LDX, etc.
@@ -78,12 +80,12 @@ protected:
 	const byte BreakOpCode = 0x00;
 
 	struct Instruction {
-		byte			OpCode;						// machine language opcode
-		const char		*Name;						// assembly instruction name
-		bool			InternalExecution;			// if true, instruction can skip a cycle in some addressing modes
-		SourceType		Source;						// addressing mode
-		TargetType		Target;						// the type of data to be changed
-		void			(Processor::*Function)();	// the Processor function to execute when the instruction is decoded
+		byte		OpCode;						// machine language opcode
+		const char	*Name;						// assembly instruction name
+		bool		InternalExecution;			// if true, instruction can skip a cycle in some addressing modes
+		Sources		Source;						// addressing mode
+		Targets		Target;						// the type of data to be changed
+		void		(Processor::*Function)();	// the Processor function to execute when the instruction is decoded
 	};
 
 	// note: source and target are swapped for store instructions
@@ -320,6 +322,7 @@ protected:
 	const Instruction *ReadInstruction();
 	void DecodeInstruction(const Instruction * Ins);
 	void ExecuteInstruction(const Instruction * Ins);
+	void Disassemble(char Output[20], const Instruction * Ins);
 			
 public:
 	int		Clock;	// internal clock
@@ -328,7 +331,7 @@ public:
 	word	PC;		// program counter
 	byte	S;		// stack pointer
 	byte	P;		// status flags
-	bool	EndOnBreak;
+	bool	EndOnBreak;	// if true, Run() will stop on BRK
 
 	Processor(Memory *RAM);
 	bool FlagCarry();
@@ -340,10 +343,11 @@ public:
 	void SendRST();
 	void SendIRQ();
 	void SendNMI();
-	void Step();
-	void Step(int Count);
-	void Run();
+	void Step();			// execute instruction at PC, deal with IRQ and RST if necessary
+	void Step(int Count);	// execute Count instructions
+	void Run();				// execute instructions until BRK is met (if EndOnBreak == true) or forever
+	// used in the tests to verify that the last opcode matches the instruction being tested
 	bool IsLastInstruction(const char *Name);
-	bool IsLastInstruction(const char *Name, SourceType Source);
-	bool IsLastInstruction(const char *Name, SourceType Source, TargetType Target);
+	bool IsLastInstruction(const char *Name, Sources Source);
+	bool IsLastInstruction(const char *Name, Sources Source, Targets Target);
 };

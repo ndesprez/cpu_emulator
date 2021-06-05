@@ -39,7 +39,7 @@ byte Memory::operator [] (word Index) const
 	return Array[Index];
 }
 
-byte& Memory::operator[](word Index)
+byte& Memory::operator[] (word Index)
 {
 	return Array[Index];
 }

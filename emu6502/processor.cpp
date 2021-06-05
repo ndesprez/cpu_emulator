@@ -16,9 +16,12 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
-#include <string.h>
+#include <iostream>
 #include <assert.h>
+#include <string.h>
 #include "processor.h"
+
+#pragma warning(disable : 4996) // for strncpy() in Disassemble()
 
 Processor::Processor(Memory *RAM) : RAM(*RAM)
 {
@@ -106,6 +109,11 @@ void Processor::Step()
 	}
 
 	const Instruction *ins = ReadInstruction();
+
+	static char code[20];
+
+	Disassemble(code, ins);
+	//cout << code << endl;
 	DecodeInstruction(ins);
 	ExecuteInstruction(ins);
 
@@ -123,6 +131,7 @@ void Processor::Step(int Count)
 
 void Processor::Run()
 {
+	// TODO: maybe we should skip do/while if EndOnBreak == false to avoid infinite loop
 	do
 	{
 		Step();
@@ -134,12 +143,12 @@ bool Processor::IsLastInstruction(const char *Name)
 	return (strcmp(LastInstruction->Name, Name) == 0);
 }
 
-bool Processor::IsLastInstruction(const char *Name, SourceType Source)
+bool Processor::IsLastInstruction(const char *Name, Sources Source)
 {
 	return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source));
 }
 
-bool Processor::IsLastInstruction(const char *Name, SourceType Source, TargetType Target)
+bool Processor::IsLastInstruction(const char *Name, Sources Source, Targets Target)
 {
 	return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
 }
@@ -713,4 +722,61 @@ void Processor::DecodeInstruction(const Instruction *Ins)
 void Processor::ExecuteInstruction(const Instruction *Ins)
 {
 	(this->*Ins->Function)();
+}
+
+void Processor::Disassemble(char Output[20], const Instruction * Ins)
+{
+	static const char hex[17] = "0123456789ABCDEF";
+	int c = 0;
+
+	do
+	{
+		Output[c++] = Ins->Name[c];
+	} while (Ins->Name[c] != 0);
+
+	if (InstructionLength[Ins->Source] > 1)
+	{
+		Output[c++] = ' ';
+
+		if ((Ins->Source == sImmediate) && (Ins->Target != tNone))
+			Output[c++] = '#';
+		else if ((Ins->Source == sIndirect) || (Ins->Source == sIndirectY) || (Ins->Source == sXIndirect))
+			Output[c++] = '(';
+
+		Output[c++] = '$';
+
+		if (InstructionLength[Ins->Source] == 2)
+		{
+			Output[c++] = hex[Data >> 4];
+			Output[c++] = hex[Data & 0xF];
+		}
+		else
+		{
+			Output[c++] = hex[Address >> 12];
+			Output[c++] = hex[(Address & 0xF00) >> 8];
+			Output[c++] = hex[(Address & 0xF0) >> 4];
+			Output[c++] = hex[Address & 0xF];
+		}
+
+		if (Ins->Source == sIndirectY)
+		{
+			strncpy(&Output[c], ", Y", 3);
+			c += 3;
+		}
+
+		if ((Ins->Source == sIndirect) || (Ins->Source == sIndirectY) || (Ins->Source == sXIndirect))
+			Output[c++] = ')';
+
+		if ((Ins->Source == sAbsoluteX) || (Ins->Source == sXIndirect) || (Ins->Source == sZeroPageX))
+		{
+			strncpy(&Output[c], ", X", 3);
+			c += 3;
+		}
+		else if ((Ins->Source == sAbsoluteY) || (Ins->Source == sZeroPageY))
+		{
+			strncpy(&Output[c], ", Y", 3);
+			c += 3;
+		}
+	}
+	Output[c] = 0;
 }
