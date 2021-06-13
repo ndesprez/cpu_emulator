@@ -83,7 +83,7 @@ protected:
 
 	struct Instruction {
 		byte		OpCode;						// machine language opcode
-		const char	*Mnemonic;						// assembly instruction name
+		const char	*Mnemonic;					// assembly instruction name
 		bool		InternalExecution;			// if true, instruction can skip a cycle in some addressing modes
 		Sources		Source;						// addressing mode
 		Targets		Target;						// the type of data to be changed
@@ -349,7 +349,7 @@ public:
 	void Step(int Count);	// execute Count instructions
 	void Run();				// execute instructions until BRK is met (if EndOnBreak == true) or forever
 	// used in tests to verify that the last opcode matches the instruction being tested
-	bool IsLastInstruction(const char *Name);
-	bool IsLastInstruction(const char *Name, Sources Source);
-	bool IsLastInstruction(const char *Name, Sources Source, Targets Target);
+	bool IsLastInstruction(const char *Mnemonic);
+	bool IsLastInstruction(const char *Mnemonic, Sources Source);
+	bool IsLastInstruction(const char *Mnemonic, Sources Source, Targets Target);
 };

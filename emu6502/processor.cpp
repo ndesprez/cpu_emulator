@@ -139,19 +139,19 @@ void Processor::Run()
 	} while ((OpCode != BreakOpCode) || !EndOnBreak);
 }
 
-bool Processor::IsLastInstruction(const char *Name)
+bool Processor::IsLastInstruction(const char *Mnemonic)
 {
-	return (strcmp(LastInstruction->Mnemonic, Name) == 0);
+	return (strcmp(LastInstruction->Mnemonic, Mnemonic) == 0);
 }
 
-bool Processor::IsLastInstruction(const char *Name, Sources Source)
+bool Processor::IsLastInstruction(const char *Mnemonic, Sources Source)
 {
-	return ((strcmp(LastInstruction->Mnemonic, Name) == 0) && (LastInstruction->Source == Source));
+	return ((strcmp(LastInstruction->Mnemonic, Mnemonic) == 0) && (LastInstruction->Source == Source));
 }
 
-bool Processor::IsLastInstruction(const char *Name, Sources Source, Targets Target)
+bool Processor::IsLastInstruction(const char *Mnemonic, Sources Source, Targets Target)
 {
-	return ((strcmp(LastInstruction->Mnemonic, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
+	return ((strcmp(LastInstruction->Mnemonic, Mnemonic) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
 }
 
 #pragma region internal functions
