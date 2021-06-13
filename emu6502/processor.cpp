@@ -113,7 +113,7 @@ void Processor::Step()
 
 	static char code[20];
 
-	Disassemble(code, ins);
+	//Disassemble(code, ins);
 	//cout << code << endl;
 	DecodeInstruction(ins);
 	ExecuteInstruction(ins);
@@ -141,17 +141,17 @@ void Processor::Run()
 
 bool Processor::IsLastInstruction(const char *Name)
 {
-	return (strcmp(LastInstruction->Name, Name) == 0);
+	return (strcmp(LastInstruction->Mnemonic, Name) == 0);
 }
 
 bool Processor::IsLastInstruction(const char *Name, Sources Source)
 {
-	return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source));
+	return ((strcmp(LastInstruction->Mnemonic, Name) == 0) && (LastInstruction->Source == Source));
 }
 
 bool Processor::IsLastInstruction(const char *Name, Sources Source, Targets Target)
 {
-	return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
+	return ((strcmp(LastInstruction->Mnemonic, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
 }
 
 #pragma region internal functions
@@ -733,8 +733,9 @@ void Processor::Disassemble(char Output[20], const Instruction * Ins)
 
 	switch (Ins->Source)
 	{
+	default:
 	case sImplied:
-		strcpy(Output, Ins->Name);
+		strcpy(Output, Ins->Mnemonic);
 		return;
 	case sImmediate:
 		if(Ins->Target == tNone)	// relative, i.e. branch
@@ -765,10 +766,19 @@ void Processor::Disassemble(char Output[20], const Instruction * Ins)
 		break;
 	}
 
-	if (InstructionLength[Ins->Source] == 2)
+	switch (InstructionLength[Ins->Source])
+	{
+	default:
+	case 1:
+		value = 0;
+		break;
+	case 2:
 		value = Data;
-	else if (InstructionLength[Ins->Source] == 3)
+		break;
+	case 3:
 		value = Address;
+		break;
+	}
 
-	snprintf(Output, 20, format[f], Ins->Name, value);
+	snprintf(Output, 20, format[f], Ins->Mnemonic, value);
 }

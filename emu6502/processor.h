@@ -38,6 +38,8 @@ enum Flags : byte {
 };
 
 // equivalent to addressing modes plus extra for transfer instructions
+// TODO: add sRelative for branches to simplify disassembly 
+// (remember to update InstructionLength further down)
 enum Sources {
 	sAccumulator = 0,	// TAX, TAY
 	sIndexX,			// TXA, TXS
@@ -81,7 +83,7 @@ protected:
 
 	struct Instruction {
 		byte		OpCode;						// machine language opcode
-		const char	*Name;						// assembly instruction name
+		const char	*Mnemonic;						// assembly instruction name
 		bool		InternalExecution;			// if true, instruction can skip a cycle in some addressing modes
 		Sources		Source;						// addressing mode
 		Targets		Target;						// the type of data to be changed
@@ -346,7 +348,7 @@ public:
 	void Step();			// execute instruction at PC, deal with IRQ and RST if necessary
 	void Step(int Count);	// execute Count instructions
 	void Run();				// execute instructions until BRK is met (if EndOnBreak == true) or forever
-	// used in the tests to verify that the last opcode matches the instruction being tested
+	// used in tests to verify that the last opcode matches the instruction being tested
 	bool IsLastInstruction(const char *Name);
 	bool IsLastInstruction(const char *Name, Sources Source);
 	bool IsLastInstruction(const char *Name, Sources Source, Targets Target);
