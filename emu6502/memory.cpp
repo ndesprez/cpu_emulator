@@ -37,11 +37,14 @@ Memory::~Memory(void)
 
 byte Memory::NibbleToByte(const char Nibble)
 {
+	assert(isxdigit(Nibble));
+
 	if (Nibble >= '0' && Nibble <= '9')
 		return Nibble - 0x30;
 	else if ((Nibble | 0x20) >= 'a' && (Nibble | 0x20) <= 'f')
 		return (Nibble | 0x20) - 0x57;
 	else
+		// invalid character!
 		return 0;
 }
 
@@ -95,8 +98,6 @@ void Memory::Write(char const *Data, bool AddBreak)
 		}
 		else
 		{
-			assert(isxdigit(c));
-
 			if (high)
 				value = 0;
 
@@ -144,11 +145,6 @@ bool Memory::ReadFile(const char *filename)
 	{
 		file.seekg(0);
 
-		for (int i = 0; i < 0x10000; i++)
-		{
-			Array[i] = 0xFF;
-		}
-
 		if (hex_format)
 		{
 			//   1 =  1 : semicolon
@@ -161,6 +157,11 @@ bool Memory::ReadFile(const char *filename)
 			char	row[522];
 			int		line = 1;
 			bool	end_of_file = false;
+
+			for (int i = 0; i < 0x10000; i++)
+			{
+				Array[i] = 0xFF;
+			}
 
 			do
 			{
@@ -183,8 +184,10 @@ bool Memory::ReadFile(const char *filename)
 				byte record_type = HexToByte(row + 7);
 				int	 checksum = 0;
 
+				// TODO: should compare byte_count + metadata and strlen(row)
+
 				for (int i = 0; i < byte_count + 5; i++)
-					checksum += HexToByte(row + i * 2 + 1);
+					checksum += HexToByte(&row[i * 2 + 1]);
 
 				if (checksum & 0xFF)
 				{
@@ -197,7 +200,7 @@ bool Memory::ReadFile(const char *filename)
 				case 00:	// data
 					for (int i = 0; i < byte_count; i++)
 					{
-						Array[address + i] = HexToByte(row + i * 2 + 9);
+						Array[address + i] = HexToByte(&row[i * 2 + 9]);
 					}
 					break;
 				case 01:	// end of file
