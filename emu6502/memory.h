@@ -25,6 +25,10 @@ class Memory
 protected:
 	byte	*Array;
 
+	byte NibbleToByte(const char Nibble);
+	byte HexToByte(const char *Hex);
+	word HexToWord(const char *Hex);
+
 public:
 	word	WriteCounter;
 

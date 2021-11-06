@@ -16,9 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
-#include <assert.h>
+#include <cassert>
 #include <fstream>
-#include <ctype.h>
+#include <cctype>
+#include <cstring>
 #include "memory.h"
 
 using namespace std;
@@ -34,12 +35,35 @@ Memory::~Memory(void)
 	delete[] Array;
 }
 
+byte Memory::NibbleToByte(const char Nibble)
+{
+	assert(isxdigit(Nibble));
+
+	if (Nibble >= '0' && Nibble <= '9')
+		return Nibble - 0x30;
+	else if ((Nibble | 0x20) >= 'a' && (Nibble | 0x20) <= 'f')
+		return (Nibble | 0x20) - 0x57;
+	else
+		// invalid character!
+		return 0;
+}
+
+byte Memory::HexToByte(const char *Hex)
+{
+	return NibbleToByte(*(Hex + 1)) + (NibbleToByte(*Hex) << 4);
+}
+
+word Memory::HexToWord(const char *Hex)
+{
+	return HexToByte(Hex + 2) + (HexToByte(Hex) << 8);
+}
+
 byte Memory::operator [] (word Index) const
 {
 	return Array[Index];
 }
 
-byte& Memory::operator[](word Index)
+byte& Memory::operator[] (word Index)
 {
 	return Array[Index];
 }
@@ -71,26 +95,21 @@ void Memory::Write(char const *Data, bool AddBreak)
 		if (c == ' ')
 		{
 			assert(high == true);
-			i++;
-			continue;
 		}
-
-		assert(isxdigit(c));
-
-		if (high)
-			value = 0;
-
-		if (c >= '0' && c <= '9')
-			value |= c - 0x30;
-		else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f')
-			value |= (c | 0x20) - 0x57;
-
-		if (high)
-			value <<= 4;
 		else
-			Array[WriteCounter++] = value;
+		{
+			if (high)
+				value = 0;
 
-		high = !high;
+			value |= NibbleToByte(c);
+
+			if (high)
+				value <<= 4;
+			else
+				Array[WriteCounter++] = value;
+
+			high = !high;
+		}
 		i++;
 	}
 	assert(high == true);
@@ -107,19 +126,102 @@ void Memory::Write(word Address, char const *Data, bool AddBreak)
 	Write(Data, AddBreak);
 }
 
+// TODO: return a more explicit error (exception?)
 bool Memory::ReadFile(const char *filename)
 {
-	ifstream file = ifstream();
-
-	file.open(filename, ios::binary);
+	ifstream	file;
+	bool		hex_format = false;
+	bool		success = false;
+	
+	if (_stricmp(strrchr(filename, '.'), ".hex") == 0)
+	{
+		file = ifstream(filename);
+		hex_format = true;
+	}
+	else
+		file = ifstream(filename, ios::binary);
 
 	if (file.is_open())
 	{
 		file.seekg(0);
-		file.read((char *)Array, 0x10000);
+
+		if (hex_format)
+		{
+			//   1 =  1 : semicolon
+			// + 2 =  3 : byte count
+			// + 4 =  7 : address
+			// + 2 =  9 : record type
+			// + x      : length * 2, up to 510
+			// + 2 = 11 : checksum
+			// + 1 = 12 : terminator
+			char	row[522];
+			int		line = 1;
+			bool	end_of_file = false;
+
+			for (int i = 0; i < 0x10000; i++)
+			{
+				Array[i] = 0xFF;
+			}
+
+			do
+			{
+				file.getline(row, 522);
+
+				if (file.fail())
+				{
+					success = false; // ERROR: row delimiter not found (line probably too long)
+					break;
+				}
+
+				if (row[0] != ':')
+				{
+					success = false; // ERROR: line should start with a semicolon
+					break;
+				}
+
+				byte byte_count = HexToByte(row + 1);
+				word address = HexToWord(row + 3);
+				byte record_type = HexToByte(row + 7);
+				int	 checksum = 0;
+
+				// TODO: should compare byte_count + metadata and strlen(row)
+
+				for (int i = 0; i < byte_count + 5; i++)
+					checksum += HexToByte(&row[i * 2 + 1]);
+
+				if (checksum & 0xFF)
+				{
+					success = false; // ERROR: checksum error
+					break;
+				}
+
+				switch (record_type)
+				{
+				case 00:	// data
+					for (int i = 0; i < byte_count; i++)
+					{
+						Array[address + i] = HexToByte(&row[i * 2 + 9]);
+					}
+					break;
+				case 01:	// end of file
+					end_of_file = true;
+					success = true;
+					break;
+				default:
+					break;
+				}
+
+				line++;
+			} while (!end_of_file && !file.eof());
+		}
+		else 
+		{
+			file.read((char *)Array, 0x10000);
+			success = true;
+		}
+
 		file.close();
-		return true;
 	}
-	else
-		return false;
+
+	return success;
 }

@@ -117,17 +117,17 @@ namespace emu6502test
 		Assert::IsTrue(CPU->IsLastInstruction(Name), MessageMismatch);
 	}
 
-	void AssertLastInstruction(const char *Name, SourceType Source) 
+	void AssertLastInstruction(const char *Name, Sources Source) 
 	{
 		Assert::IsTrue(CPU->IsLastInstruction(Name, Source), MessageMismatch);
 	}
 
-	void AssertLastInstruction(const char *Name, SourceType Source, TargetType Target)
+	void AssertLastInstruction(const char *Name, Sources Source, Targets Target)
 	{
 		Assert::IsTrue(CPU->IsLastInstruction(Name, Source, Target), MessageMismatch);
 	}
 
-	void _method_initialize()
+	void _method_initialize(bool StarWithPHP = true)
 	{
 		RAM = new Memory();
 		(*RAM)[0xFFFC] = 0x00;
@@ -141,9 +141,10 @@ namespace emu6502test
 		UnchangedFlagsMask = 0xFF;
 		InitialStatus = CPU->P;
 
-		// always start the test with PHP so we can pull (i.e. reset) the 
-		// status register just before we execute the instruction we're testing
-		RAM->Write("08");
+		// start the test with PHP so we can pull (i.e. reset) the status
+		// register just before we execute the instruction we're testing
+		if(StarWithPHP)
+			RAM->Write("08");
 	}
 
 	void _method_cleanup()
@@ -2185,6 +2186,365 @@ namespace emu6502test
 			AssertLastInstruction("RTI");
 			Assert::AreEqual(0x1003, (int)CPU->PC);
 			AssertFlagsUnchanged();
+		}
+	};
+
+	TEST_CLASS(Cycle)
+	{
+		TEST_METHOD_INITIALIZE(createCPU)
+		{
+			_method_initialize(false);
+		}
+
+		TEST_METHOD_CLEANUP(deleteCPU)
+		{
+			_method_cleanup();
+		}
+
+		TEST_METHOD(CYC_IMP)
+		{
+			RAM->Write("EA");
+			CPU->Step(); // do not execute BRK
+			AssertLastInstruction("NOP");
+			Assert::AreEqual(2, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_IMM)
+		{
+			RAM->Write("A9 00");
+			CPU->Step(); 
+			AssertLastInstruction("LDA", sImmediate);
+			Assert::AreEqual(2, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_ABS)
+		{
+			RAM->Write("AD 00 10");
+			CPU->Step();
+			AssertLastInstruction("LDA", sAbsolute);
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_ABSX)
+		{
+			RAM->Write("A2 10 BD 00 10");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDA", sAbsoluteX);
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_ABSX_CPG)
+		{
+			RAM->Write("A2 10 BD FF 10");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDA", sAbsoluteX);
+			Assert::AreEqual(5, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_ABSY)
+		{
+			RAM->Write("A0 10 B9 00 10");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDA", sAbsoluteY);
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_ABSY_CPG)
+		{
+			RAM->Write("A0 10 B9 FF 10");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDA", sAbsoluteY);
+			Assert::AreEqual(5, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_ZPG)
+		{
+			RAM->Write("A5 20");
+			CPU->Step();
+			AssertLastInstruction("LDA", sZeroPage);
+			Assert::AreEqual(3, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_ZPGX)
+		{
+			RAM->Write("A2 10 B5 20");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDA", sZeroPageX);
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_ZPGY)
+		{
+			RAM->Write("A0 10 B6 20");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDX", sZeroPageY);
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_XIND)
+		{
+			RAM->Write("A2 20 A1 20");
+			RAM->Write(0x0040, "00 30");
+			RAM->Write(0x3000, "DF");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDA", sXIndirect);
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_INDY)
+		{
+			RAM->Write("A0 30 B1 20");
+			RAM->Write(0x0020, "00 40");
+			RAM->Write(0x4030, "E0");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDA", sIndirectY);
+			Assert::AreEqual(5, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_INDY_CPG)
+		{
+			RAM->Write("A0 30 B1 20");
+			RAM->Write(0x0020, "FF 40");
+			RAM->Write(0x412F, "E0");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("LDA", sIndirectY);
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_STO_ABS)
+		{
+			RAM->Write("8D 00 10");
+			CPU->Step();
+			AssertLastInstruction("STA", sAbsolute);
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_STO_ABSX)
+		{
+			RAM->Write("A2 10 9D 00 10");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("STA", sAbsoluteX);
+			Assert::AreEqual(5, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_STO_ABSY)
+		{
+			RAM->Write("A0 10 99 00 10");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("STA", sAbsoluteY);
+			Assert::AreEqual(5, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_STO_ZPG)
+		{
+			RAM->Write("85 10");
+			CPU->Step();
+			AssertLastInstruction("STA", sZeroPage);
+			Assert::AreEqual(3, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_STO_ZPGX)
+		{
+			RAM->Write("A2 10 95 20");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("STA", sZeroPageX);
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_STO_ZPGY)
+		{
+			RAM->Write("A0 10 96 20");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("STX", sZeroPageY);
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_STO_XIND)
+		{
+			RAM->Write("A2 20 81 20");
+			RAM->Write(0x0040, "00 30");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("STA", sXIndirect);
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_STO_INDY)
+		{
+			RAM->Write("A0 30 91 20");
+			RAM->Write(0x0020, "00 40");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("STA", sIndirectY);
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_RMW_ABS)
+		{
+			RAM->Write("0E 00 10");
+			CPU->Step();
+			AssertLastInstruction("ASL", sAbsolute);
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_RMW_ABSX)
+		{
+			RAM->Write("A2 20 1E 00 20");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("ASL", sAbsoluteX);
+			Assert::AreEqual(7, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_RMW_ZPG)
+		{
+			RAM->Write("06 10");
+			CPU->Step();
+			AssertLastInstruction("ASL", sZeroPage);
+			Assert::AreEqual(5, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_RMW_ZPGX)
+		{
+			RAM->Write("A2 10 16 20");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("ASL", sZeroPageX);
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_PUSH)
+		{
+			RAM->Write("48");
+			CPU->Step();
+			AssertLastInstruction("PHA");
+			Assert::AreEqual(3, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_PULL)
+		{
+			RAM->Write("68");
+			CPU->Step();
+			AssertLastInstruction("PLA");
+			Assert::AreEqual(4, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_JMP_ABS)
+		{
+			RAM->Write("4C 00 10");
+			CPU->Step();
+			AssertLastInstruction("JMP", sAbsolute);
+			Assert::AreEqual(3, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_JMP_IND)
+		{
+			RAM->Write("6C 00 40");
+			RAM->Write(0x4000, "00 50");
+			CPU->Step();
+			AssertLastInstruction("JMP", sIndirect);
+			Assert::AreEqual(5, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_JSR)
+		{
+			RAM->Write("20 00 10");
+			CPU->Step();
+			AssertLastInstruction("JSR");
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_RTS)
+		{
+			RAM->Write("20 00 30");
+			RAM->Write(0x3000, "60");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("RTS");
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_BRK)
+		{
+			RAM->Write("00");
+			CPU->EndOnBreak = false; // to avoid a NULL LastInstruction
+			CPU->Step();
+			AssertLastInstruction("BRK");
+			Assert::AreEqual(7, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_RTI)
+		{
+			RAM->Write("00 EA");
+			RAM->Write(0xFFFE, "00 80");
+			RAM->Write(0x8000, "EA 40");
+			CPU->EndOnBreak = false;
+			CPU->Step(2);
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("RTI");
+			Assert::AreEqual(6, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_BRC_KO)
+		{
+			RAM->Write("18 B0 10");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("BCS");
+			Assert::AreEqual(2, CPU->Clock);
+		}
+
+		TEST_METHOD(CYC_BRC_OK)
+		{
+			RAM->Write("18 90 10");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("BCC");
+			Assert::AreEqual(3, CPU->Clock);
+		}	
+
+		TEST_METHOD(CYC_BRC_CPG)
+		{
+			RAM->Write("18 90 F0");
+			CPU->Step();
+			CPU->Clock = 0;
+			CPU->Step();
+			AssertLastInstruction("BCC");
+			Assert::AreEqual(4, CPU->Clock);
 		}
 	};
 }

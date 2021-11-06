@@ -16,8 +16,13 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
-#include <string.h>
+#include <iostream>
+#include <cstdio>
+#include <cassert>
+#include <cstring>
 #include "processor.h"
+
+#pragma warning(disable : 4996) // for strcpy() in Disassemble()
 
 Processor::Processor(Memory *RAM) : RAM(*RAM)
 {
@@ -26,6 +31,7 @@ Processor::Processor(Memory *RAM) : RAM(*RAM)
 	Data = 0;
 	Address = 0;
 	OpCode = 0;
+	LastInstruction = nullptr;
 
 	A = 0;
 	X = 0;
@@ -33,6 +39,8 @@ Processor::Processor(Memory *RAM) : RAM(*RAM)
 	S = 0;
 	P = 0;
 	PC = 0;
+
+	Clock = 0;
 
 	EndOnBreak = false;
 
@@ -101,7 +109,14 @@ void Processor::Step()
 		return;
 	}
 
-	ExecuteInstruction();
+	const Instruction *ins = ReadInstruction();
+
+	static char code[20];
+
+	//Disassemble(code, ins);
+	//cout << code << endl;
+	DecodeInstruction(ins);
+	ExecuteInstruction(ins);
 
 	if (NonMaskableInterruptState)
 		NonMaskableInterrupt();
@@ -117,25 +132,26 @@ void Processor::Step(int Count)
 
 void Processor::Run()
 {
+	// TODO: maybe we should skip do/while if EndOnBreak == false to avoid infinite loop
 	do
 	{
 		Step();
 	} while ((OpCode != BreakOpCode) || !EndOnBreak);
 }
 
-bool Processor::IsLastInstruction(const char *Name)
+bool Processor::IsLastInstruction(const char *Mnemonic)
 {
-	return (strcmp(LastInstruction->Name, Name) == 0);
+	return (strcmp(LastInstruction->Mnemonic, Mnemonic) == 0);
 }
 
-bool Processor::IsLastInstruction(const char *Name, SourceType Source)
+bool Processor::IsLastInstruction(const char *Mnemonic, Sources Source)
 {
-	return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source));
+	return ((strcmp(LastInstruction->Mnemonic, Mnemonic) == 0) && (LastInstruction->Source == Source));
 }
 
-bool Processor::IsLastInstruction(const char *Name, SourceType Source, TargetType Target)
+bool Processor::IsLastInstruction(const char *Mnemonic, Sources Source, Targets Target)
 {
-	return ((strcmp(LastInstruction->Name, Name) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
+	return ((strcmp(LastInstruction->Mnemonic, Mnemonic) == 0) && (LastInstruction->Source == Source) && (LastInstruction->Target == Target));
 }
 
 #pragma region internal functions
@@ -154,56 +170,33 @@ byte Processor::Add(byte A, byte B)
 	return ((word)A + B) & 0xFF;
 }
 
-byte Processor::ReadData(word Address)
+byte Processor::ReadByte(word Address)
 {
-	Data = RAM[Address];
-
-	return Data;
-}
-
-void Processor::WriteData(word Address)
-{
-	RAM[Address] = Data;
+	Tick();
+	return RAM[Address];
 }
 
 byte Processor::ReadOpCode()
 {
-	OpCode = RAM[PC++];
-
+	OpCode = ReadByte(PC++);
 	return OpCode;
 }
 
-void Processor::ReadDataAtPC()
+word Processor::ReadWord(word Address)
 {
-	ReadData(PC++);
-}
-
-word Processor::ReadAddress(word Address)
-{
-	this->Address = RAM[Address] | (RAM[Add(Address, 1)] << 8);
-
-	return this->Address;
-}
-
-void Processor::WriteAddress(word Address)
-{
-	RAM[Address] = this->Address & 0xFF;
-	RAM[Add(Address, 1)] = this->Address >> 8;
-}
-
-void Processor::ReadAddressAtPC()
-{
-	ReadAddress(PC);
-	PC += 2;
+	Tick(2);
+	return RAM[Address] | (RAM[Add(Address, 1)] << 8);
 }
 
 void Processor::Push(byte Data)
 {
 	RAM[Add((word)0x100, S--)] = Data;
+	Tick();
 }
 
 byte Processor::PullByte()
 {
+	Tick();
 	return RAM[Add((word)0x100, ++S)];
 }
 
@@ -224,6 +217,12 @@ void Processor::WriteTargetFlags()
 {
 	WriteFlag(fZero, (*Target == 0));
 	WriteFlag(fNegative, SignBit(*Target));
+}
+
+void Processor::Tick(byte Cycles)
+{
+	// TODO: insert throttling here
+	Clock += Cycles;
 }
 
 #pragma endregion
@@ -248,7 +247,6 @@ void Processor::Compare()
 {
 	WriteFlag(fCarry, (*Target >= *Source));
 	WriteFlag(fZero, (*Target == *Source));
-	// TODO: code a better byte subtraction if necessary
 	WriteFlag(fNegative, SignBit(*Target - *Source));
 }
 
@@ -275,6 +273,7 @@ void Processor::RotateLeft()
 	byte c = ReadFlag(fCarry);
 	WriteFlag(fCarry, SignBit(*Target));
 	*Target = ((*Target) << 1) | c;
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -283,6 +282,7 @@ void Processor::RotateRight()
 	byte c = ReadFlag(fCarry);
 	WriteFlag(fCarry, (*Target) & 1);
 	*Target = ((*Target) >> 1) | (c << 7);
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -290,6 +290,7 @@ void Processor::ShiftLeft()
 {
 	WriteFlag(fCarry, SignBit(*Target));
 	*Target <<= 1;
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -297,18 +298,21 @@ void Processor::ShiftRight()
 {
 	WriteFlag(fCarry, (*Target) & 1);
 	*Target >>= 1;
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
 void Processor::Increment()
 {
 	(*Target)++;
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
 void Processor::Decrement()
 {
 	(*Target)--;
+	Tick(2); // one cycle for modify, one cycle for write
 	WriteTargetFlags();
 }
 
@@ -371,7 +375,7 @@ void Processor::SubtractWithCarry()
 		result = *Target - *Source - 1 + ReadFlag(fCarry);
 		WriteFlag(fCarry, (result & 0x100) == 0);
 	}
-	// if both operands sign is identical but differs from the result sign (e.g. 100 + 49 = -107)
+	// if both operands sign is identical but differs from the result sign (e.g. -100 - 49 = 107)
 	WriteFlag(fOverflow, ~(*Source ^ result) & (*Target ^ result) & 0x80);
 	*Target = result & 0xFF;
 	
@@ -398,6 +402,7 @@ void Processor::PullAddress(word &Address)
 void Processor::Pull()
 {
 	*Target = PullByte();
+	Tick(); // discarded data
 	if (Target == &P)
 	{
 		WriteFlag(fBreak, true);
@@ -411,6 +416,9 @@ void Processor::Pull()
 
 void Processor::Branch()
 {
+	if ((PC & 0xFF00) != ((PC + (char)*Source) & 0xFF00))
+		Tick();
+	Tick();
 	PC += (char)*Source;
 }
 
@@ -423,12 +431,14 @@ void Processor::Jump()
 void Processor::Call()
 {
 	PushAddress(PC - 1);
+	Tick(); // discarded data
 	Jump();
 }
 
 void Processor::Return()
 {
 	PullAddress(PC);
+	Tick(2); // discarded data
 	PC++;
 }
 
@@ -438,7 +448,8 @@ void Processor::Break()
 	{
 		PushAddress(PC + 1);
 		Push(P | fBreak | fReserved);
-		PC = ReadAddress(InterruptVector);
+		WriteFlag(fInterrupt, true);
+		PC = ReadWord(InterruptVector);
 	}
 }
 
@@ -541,7 +552,8 @@ void Processor::Reset()
 {
 	S = 0xFF;
 	P = 0b00110100;
-	PC = ReadAddress(ResetVector);
+	PC = ReadWord(ResetVector);
+	Clock = 0;
 	ResetState = false;
 	InterruptState = false;
 	NonMaskableInterruptState = false;
@@ -553,7 +565,7 @@ void Processor::Interrupt()
 	PushAddress(PC);
 	Push(P & ~fBreak);
 	WriteFlag(fInterrupt, true);
-	PC = ReadAddress(InterruptVector);
+	PC = ReadWord(InterruptVector);
 }
 
 void Processor::NonMaskableInterrupt()
@@ -562,31 +574,48 @@ void Processor::NonMaskableInterrupt()
 	PushAddress(PC);
 	Push(P);
 	WriteFlag(fInterrupt, true);
-	PC = ReadAddress(NonMaskableInterruptVector);
+	PC = ReadWord(NonMaskableInterruptVector);
 }
 
 void Processor::ReturnFromInterrupt()
 {
 	P = PullByte();
+	Tick(); // discarded data
 	PullAddress(PC);
 }
 
 #pragma endregion
 
-void Processor::ExecuteInstruction()
+const Processor::Instruction *Processor::ReadInstruction()
 {
 	ReadOpCode();
 
 	// TODO: handle exception when OpCode is undefined (InstructionSet[OpCode] == nullptr)
-	const Instruction *in = InstructionSet[OpCode];
+	const Instruction *ins = InstructionSet[OpCode];
 
 	if ((OpCode != BreakOpCode) || (!EndOnBreak))
-		LastInstruction = in;
+		LastInstruction = ins;
 
-	switch (in->Source)
+	assert(ins != nullptr);
+
+	if (InstructionLength[ins->Source] == 2)
+		Data = ReadByte(PC++);
+	else if (InstructionLength[ins->Source] == 3)
+	{
+		Address = ReadWord(PC);
+		PC += 2;
+	}
+
+	return ins;
+}
+
+void Processor::DecodeInstruction(const Instruction *Ins)
+{
+	switch (Ins->Source)
 	{
 	case sImplied:
 		Source = nullptr;
+		Tick(); // discarded opcode
 		break;
 	case sAccumulator:
 		Source = &A;
@@ -601,53 +630,60 @@ void Processor::ExecuteInstruction()
 		Source = &S;
 		break;
 	case sAbsolute:
-		ReadAddressAtPC();
 		Source = &RAM[Address];
+		// if we write data in some way
+		if (Ins->Target != tNone)
+			Tick();
 		break;
 	case sAbsoluteX:
-		ReadAddressAtPC();
 		Source = &RAM[Add(Address, X)];
+		if (!Ins->InternalExecution || (Add((word)(Address & 0xFF), X) >= 0x100))
+			Tick();
+		Tick();
 		break;
 	case sAbsoluteY:
-		ReadAddressAtPC();
 		Source = &RAM[Add(Address, Y)];
+		if (!Ins->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
+			Tick();
+		Tick();
 		break;
 	case sImmediate:
-		ReadDataAtPC();
 		Source = &Data;
 		break;
 	case sIndirect:
-		ReadAddressAtPC();
-
 		// JMP ($xxFF) bug (luckily the only instruction to use indirect mode)
 		if ((Address & 0xFF) == 0xFF)
+		{
 			Address = RAM[Address] | (RAM[Address & 0xFF00] << 8);
+			Tick(2);
+		}
 		else
-			ReadAddress(Address);
+			Address = ReadWord(Address);
 
 		Source = &RAM[Address];
 		break;
 	case sXIndirect:
-		ReadDataAtPC();
-		ReadAddress(Add(Data, X));
-		Source = &RAM[Address];
+		Source = &RAM[ReadWord(Add(Data, X))];
+		Tick(2);
 		break;
 	case sIndirectY:
-		ReadDataAtPC();
-		ReadAddress(Data);
+		Address = ReadWord(Data);
 		Source = &RAM[Add(Address, Y)];
+		if (!Ins->InternalExecution || (Add((word)(Address & 0xFF), Y) >= 0x100))
+			Tick();
+		Tick();
 		break;
 	case sZeroPage:
-		ReadDataAtPC();
 		Source = &RAM[Data];
+		Tick();
 		break;
 	case sZeroPageX:
-		ReadDataAtPC();
 		Source = &RAM[Add(Data, X)];
+		Tick(2);
 		break;
 	case sZeroPageY:
-		ReadDataAtPC();
 		Source = &RAM[Add(Data, Y)];
+		Tick(2);
 		break;
 	default:
 		// unknown addressing mode ?
@@ -655,7 +691,7 @@ void Processor::ExecuteInstruction()
 	}
 
 	// TODO: this can be set in the LegalInstructionSet array initialisation
-	switch (in->Target)
+	switch (Ins->Target)
 	{
 	case tNone:
 		Target = nullptr;
@@ -682,6 +718,67 @@ void Processor::ExecuteInstruction()
 		// unknown target ?
 		break;
 	}
+}
 
-	(this->*in->Function)();
+void Processor::ExecuteInstruction(const Instruction *Ins)
+{
+	(this->*Ins->Function)();
+}
+
+void Processor::Disassemble(char Output[20], const Instruction * Ins)
+{
+	int f;
+	word value;
+	const char format[7][12] = {"%s #$%X" , "%s $%X", "%s $%X, X", "%s $%X, Y", "%s ($%X)","%s ($%X), X", "%s ($%X, Y)"};
+
+	switch (Ins->Source)
+	{
+	default:
+	case sImplied:
+		strcpy(Output, Ins->Mnemonic);
+		return;
+	case sImmediate:
+		if(Ins->Target == tNone)	// relative, i.e. branch
+			f = 1;
+		else
+			f = 0;
+		break;
+	case sAbsolute:
+	case sZeroPage:
+		f = 1;
+		break;
+	case sAbsoluteX:
+	case sZeroPageX:
+		f = 2;
+		break;
+	case sAbsoluteY:
+	case sZeroPageY:
+		f = 3;
+		break;
+	case sIndirect:
+		f = 4;
+		break;
+	case sXIndirect:
+		f = 5;
+		break;
+	case sIndirectY:
+		f = 6;
+		break;
+	}
+
+	switch (InstructionLength[Ins->Source])
+	{
+	default:
+	case 1:
+		value = 0;
+		break;
+	case 2:
+		value = Data;
+		break;
+	case 3:
+		value = Address;
+		break;
+	}
+
+	snprintf(Output, 20, format[f], Ins->Mnemonic, value);
 }
